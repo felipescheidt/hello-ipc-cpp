@@ -1,0 +1,4 @@
+#ifndef HELLO_IPC_SERVICE_HPP_
+#define HELLO_IPC_SERVICE_HPP_
+
+#endif // HELLO_IPC_SERVICE_HPP_
