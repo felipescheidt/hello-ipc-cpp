@@ -21,11 +21,25 @@ TEST(ServiceTest, ParseKeyValue_NoValue) {
     EXPECT_EQ(result.second, "");
 }
 
+TEST(ServiceTest, ParseKeyValue_EmptyString) {
+    auto result = Service::parseKeyValue("");
+    EXPECT_EQ(result.first, "");
+    EXPECT_EQ(result.second, "");
+}
+
 TEST(ServiceTest, ParseKeyValue_NoEquals) {
     std::string msg = "invalidmessage";
     auto result = Service::parseKeyValue(msg);
     EXPECT_EQ(result.first, "invalidmessage");
     EXPECT_EQ(result.second, "");
+}
+
+TEST(ServiceTest, ConnectionFailure) {
+    EXPECT_THROW(TestService("256.256.256.256", 12345), std::runtime_error);
+}
+
+TEST(ServiceTest, InvalidIP) {
+    EXPECT_THROW(TestService("invalid_ip", 12345), std::runtime_error);
 }
 
 TEST(ServiceTest, DISABLED_SendAndReceiveMessage) {
