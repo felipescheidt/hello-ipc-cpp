@@ -1,10 +1,14 @@
 #include <gtest/gtest.h>
 #include "Service.hpp"
 
-// A simple derived class to instantiate Service for testing
+/** * @file ServiceTests.cpp
+ * @brief Unit tests for the Service class.
+ *
+ * This file contains unit tests for the Service class, including message parsing and connection handling.
+ */
 class TestService : public Service {
 public:
-    TestService(const std::string& ip, int port) : Service(ip, port) {}
+    TestService(const std::string &ip, int port) : Service(ip, port, "TestService") {}
 };
 
 TEST(ServiceTest, ParseKeyValue_ValidInput) {
@@ -42,12 +46,20 @@ TEST(ServiceTest, InvalidIP) {
     EXPECT_THROW(TestService("invalid_ip", 12345), std::runtime_error);
 }
 
+TEST(ServiceTest, SendAndReceiveMessageWithInvalidPort) {
+    EXPECT_THROW(TestService("127.0.0.1", 99999), std::runtime_error);
+}
+
 TEST(ServiceTest, DISABLED_SendAndReceiveMessage) {
-    // Replace with a valid IP and port where a test server is running
     TestService service("127.0.0.1", 12345);
     std::string testMsg = "ping=test";
     EXPECT_NO_THROW(service.sendMessage(testMsg));
     // The server should respond with "pong=test"
     std::string response = service.receiveMessage();
     EXPECT_EQ(response, "pong=test\n");
+}
+
+int main(int argc, char **argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }
