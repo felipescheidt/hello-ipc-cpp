@@ -14,9 +14,20 @@
  * @param port The port number of the server.
  * @throws std::runtime_error if socket creation, address conversion, or connection fails.
  */
-Service::Service(const std::string &ip, int port, const std::string &serviceName)
+Service::Service(const std::string &ip, int port, const std::string &serviceName, bool testMode)
     : logger_(serviceName), ip_(ip), port_(port) {
 
+    if (!testMode) {
+        setupSocket(ip, port);
+    }
+
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0) {
+        throw std::runtime_error("Failed to create socket");
+    }
+}
+
+void Service::setupSocket(const std::string &ip, int port) {
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
         throw std::runtime_error("Failed to create socket");

@@ -25,7 +25,8 @@ public:
     static std::pair<std::string, std::string> parseKeyValue(const std::string &msg);
 
 protected:
-    Service(const std::string &ip, int port, const std::string &serviceName);
+    Service(const std::string &ip, int port, const std::string &serviceName, bool testMode = false);
+    void setupSocket(const std::string &ip, int port);
 
     int sockfd;
     struct sockaddr_in server_addr;

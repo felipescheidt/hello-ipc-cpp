@@ -8,7 +8,7 @@
  */
 class TestService : public Service {
 public:
-    TestService(const std::string &ip, int port) : Service(ip, port, "TestService") {}
+    TestService(const std::string &ip, int port) : Service(ip, port, "TestService", false) {}
 };
 
 TEST(ServiceTest, ParseKeyValue_ValidInput) {
