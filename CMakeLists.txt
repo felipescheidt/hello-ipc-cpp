@@ -60,6 +60,16 @@ endif()
 # Unit testing setup
 #
 
+# --- Google Test Integration (MUST BE IN ROOT CMAKE) ---
+include(FetchContent)
+FetchContent_Declare(
+  googletest
+  URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
+)
+# For projects with C++11 or newer, set this to avoid a CMake warning
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
+
 option(${PROJECT_NAME}_ENABLE_UNIT_TESTING "Enable unit tests" ON) # Unit tests enabled by default
 
 if(${PROJECT_NAME}_ENABLE_UNIT_TESTING)

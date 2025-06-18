@@ -32,14 +32,13 @@ foreach(file ${test_sources})
     target_link_options(hello_ipc_lib PUBLIC -fprofile-arcs -ftest-coverage)
   endif()
 
-  find_package(GTest REQUIRED)
   target_link_libraries(
     ${test_name}_Test
     PUBLIC
-      GTest::GTest
-      GTest::Main
-      ${GOOGLE_MOCK_LIBRARIES}
       hello_ipc_lib
+      GTest::gtest
+      GTest::gmock
+      GTest::gtest_main
   )
 
   add_test(

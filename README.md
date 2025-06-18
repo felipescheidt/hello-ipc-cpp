@@ -32,15 +32,16 @@ mkdir build/ && cd build/
 cmake ..
 cmake --build .
 ```
+After the commands above you will be able to find the binary in build/ dir.
 
-Or, if you need to enable debug symbols:
+If you need to enable debug symbols:
 ```bash
 mkdir build/ && cd build/
 cmake -DCMAKE_BUILD_TYPE=Debug ..
 cmake --build .
 ```
 
-Running unit tests:
+Unit tests:
 ```bash
 mkdir build/ && cd build/
 cmake -Dhello_ipc_ENABLE_UNIT_TESTING=ON ..
@@ -48,9 +49,7 @@ cmake --build .
 ctest -V
 ```
 
-For code coverage, after ctest running:
+For code coverage, after running tests:
 ```bash
-gcovr -r .. --exclude main.cpp
+gcovr -r .. --exclude main.cpp --exclude _deps
 ```
-
-After the commands above you will be able to find the binary in build/ dir.
