@@ -1,9 +1,12 @@
 cmake_minimum_required(VERSION 3.15)
 
 project(
-  ${CMAKE_PROJECT_NAME}Tests # This will be hello_ipc-Tests
+  ${CMAKE_PROJECT_NAME}Tests
   LANGUAGES CXX
 )
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 file(GLOB test_sources "src/hello-ipc/*.cpp")
 
@@ -30,7 +33,6 @@ foreach(file ${test_sources})
   endif()
 
   find_package(GTest REQUIRED)
-
   target_link_libraries(
     ${test_name}_Test
     PUBLIC
@@ -38,13 +40,6 @@ foreach(file ${test_sources})
       GTest::Main
       ${GOOGLE_MOCK_LIBRARIES}
       hello_ipc_lib
-  )
-
-  find_package(Threads REQUIRED)
-  target_link_libraries(
-    ${test_name}_Test
-    PUBLIC
-      ${CMAKE_THREAD_LIBS_INIT}
   )
 
   add_test(
