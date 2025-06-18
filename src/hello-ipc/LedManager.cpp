@@ -4,7 +4,7 @@
 
 LedManager::LedManager(const std::string &ip, int port)
     : Service(ip, port, "LedManager") {
-    //logger_.log("LedManager initialized with IP: " + ip + " and port: " + std::to_string(port));
+    logger_.log("LedManager initialized with IP: " + ip + " and port: " + std::to_string(port));
 }
 
 void LedManager::updateLedState(const std::string &message) {

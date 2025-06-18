@@ -13,10 +13,11 @@
  */
 class Service {
 public:
+    Service(const std::string &ip, int port, const std::string &serviceName, bool testMode = false);
     virtual ~Service();
 
     // Sends a message to the IPC system
-    void sendMessage(const std::string &message) const;
+    virtual void sendMessage(const std::string &message) const;
 
     // Receives a message from the IPC system
     std::string receiveMessage() const;
@@ -24,8 +25,10 @@ public:
     // Helper to parse key-value from received message
     static std::pair<std::string, std::string> parseKeyValue(const std::string &msg);
 
+    // Runs the server on the specified port
+    static void run_server(int port);
+
 protected:
-    Service(const std::string &ip, int port, const std::string &serviceName, bool testMode = false);
     void setupSocket(const std::string &ip, int port);
 
     int sockfd;

@@ -6,6 +6,8 @@
 #include "Service.hpp"
 #include <cstring>
 #include <arpa/inet.h>
+#include <sys/socket.h>
+#include "LedManager.hpp"
 
 /**
  * @brief Constructs a Service object and establishes a TCP connection to the specified IP and port.
@@ -20,13 +22,17 @@ Service::Service(const std::string &ip, int port, const std::string &serviceName
     if (!testMode) {
         setupSocket(ip, port);
     }
-
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0) {
-        throw std::runtime_error("Failed to create socket");
-    }
 }
 
+/**
+ * @brief Sets up the socket connection to the specified IP and port.
+ * 
+ * This method creates a socket, sets up the server address structure, and connects to the server.
+ * 
+ * @param ip The IP address of the server.
+ * @param port The port number of the server.
+ * @throws std::runtime_error if socket creation, address conversion, or connection fails.
+ */
 void Service::setupSocket(const std::string &ip, int port) {
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
@@ -51,6 +57,11 @@ void Service::setupSocket(const std::string &ip, int port) {
     logger_.log("New connection established to " + ip + ":" + std::to_string(port));
 }
 
+/**
+ * @brief Destructor for the Service class.
+ * 
+ * Closes the socket if it is open.
+ */
 Service::~Service() {
     if (sockfd >= 0) {
         close(sockfd);
@@ -109,4 +120,83 @@ std::pair<std::string, std::string> Service::parseKeyValue(const std::string &ms
     }
 
     return {msg.substr(0, pos), msg.substr(pos + 1)};
+}
+
+/**
+ * @brief Runs the LedManager server on the specified port.
+ * 
+ * This method creates a TCP socket, binds it to the specified port, and listens for incoming connections.
+ * It accepts client connections and processes messages from each client in a loop.
+ * 
+ * @param port The port number to listen on.
+ */
+void Service::run_server(int port) {
+    LedManager ledManager;
+    int server_fd, new_socket;
+    struct sockaddr_in address;
+    int opt = 1;
+    socklen_t addrlen = sizeof(address);
+
+    // Create socket file descriptor
+    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
+        perror("socket failed");
+        exit(EXIT_FAILURE);
+    }
+
+    // Forcefully attach socket to the port, reusing it if necessary
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
+        perror("setsockopt");
+        exit(EXIT_FAILURE);
+    }
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = INADDR_ANY;
+    address.sin_port = htons(port);
+
+    // Bind the socket to the network address and port
+    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
+        perror("bind failed");
+        exit(EXIT_FAILURE);
+    }
+
+    // Start listening for incoming connections
+    if (listen(server_fd, 3) < 0) {
+        perror("listen");
+        exit(EXIT_FAILURE);
+    }
+
+    std::cout << "LedManager server listening on port " << port << std::endl;
+
+    // Main outer loop to accept new client connections
+    while (true) {
+        if ((new_socket = accept(server_fd, (struct sockaddr *)&address, &addrlen)) < 0) {
+            perror("accept");
+            continue; // On failure, wait for the next connection
+        }
+
+        std::cout << "New client connected." << std::endl;
+
+        // Inner loop to handle all messages from the connected client
+        while (true) {
+            char buffer[1024] = {0};
+            ssize_t bytes_read = read(new_socket, buffer, 1024);
+
+            // If read() returns 0, the client has closed the connection.
+            // If it returns < 0, an error occurred.
+            if (bytes_read <= 0) {
+                break; // Exit the inner loop to close this client's socket
+            }
+
+            std::string message(buffer, bytes_read);
+            std::cout << "Server received: " << message << std::endl;
+            try {
+                ledManager.updateLedState(message);
+            } catch (const std::exception& e) {
+                std::cerr << "Error processing message: " << e.what() << std::endl;
+            }
+        }
+
+        // The client has disconnected, so close their socket.
+        std::cout << "Client disconnected. Closing socket." << std::endl;
+        close(new_socket);
+    }
 }
