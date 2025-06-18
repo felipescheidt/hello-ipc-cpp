@@ -56,9 +56,15 @@ void UpdateLed::handleArguments() {
  * like '1' for on, '!1' for off, or 'exit' to quit the loop.
  */
 void UpdateLed::handleUserInput() {
+    std::cout << "Welcome to the UpdateLed client!" << std::endl;
+    std::cout << "Usage:" << std::endl;
+    std::cout << "  '1' for led1=on" << std::endl;
+    std::cout << " '!1' for led1=off" << std::endl;
+    std::cout << "  'exit' to quit" << std::endl;
+
     std::string input;
     while (true) {
-        std::cout << "Enter command ('1' for on, '!1' for off, or 'exit'): ";
+        std::cout << "Enter command: ";
         std::getline(std::cin, input);
 
         if (input == "exit") {

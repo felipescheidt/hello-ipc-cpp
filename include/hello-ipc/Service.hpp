@@ -12,33 +12,33 @@
  * @brief Abstract base class for IPC services using TCP/IP sockets.
  */
 class Service {
-public:
-    Service(const std::string &ip, int port, const std::string &serviceName, bool testMode = false);
-    virtual ~Service();
+    public:
+        Service(const std::string &ip, int port, const std::string &serviceName, bool testMode = false);
+        virtual ~Service();
 
-    // Sends a message to the IPC system
-    virtual void sendMessage(const std::string &message) const;
+        // Sends a message to the IPC system
+        virtual void sendMessage(const std::string &message) const;
 
-    // Receives a message from the IPC system
-    std::string receiveMessage() const;
+        // Receives a message from the IPC system
+        std::string receiveMessage() const;
 
-    // Helper to parse key-value from received message
-    static std::pair<std::string, std::string> parseKeyValue(const std::string &msg);
+        // Helper to parse key-value from received message
+        static std::pair<std::string, std::string> parseKeyValue(const std::string &msg);
 
-    // Runs the server on the specified port
-    static void run_server(int port);
+        // Runs the server on the specified port
+        static void run_server(int port);
 
-protected:
-    void setupSocket(const std::string &ip, int port);
+    protected:
+        void setupSocket(const std::string &ip, int port);
 
-    int sockfd;
-    struct sockaddr_in server_addr;
+        int sockfd;
+        struct sockaddr_in server_addr;
 
-    Logger logger_; // Logger instance for logging messages
+        Logger logger_; // Logger instance for logging messages
 
-private:
-    std::string ip_;
-    int port_;
+    private:
+        std::string ip_;
+        int port_;
 };
 
 #endif // HELLO_IPC_SERVICE_HPP_
