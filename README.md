@@ -53,3 +53,20 @@ For code coverage, after running tests:
 ```bash
 gcovr -r .. --exclude main.cpp --exclude _deps
 ```
+
+## Running the project
+
+Once you have built the project, you'll be able to find the application's binary at build folder.
+
+### Starting the socket server
+
+```bash
+cd build/
+./hello_ipc --server
+```
+
+### Starting the hello_ipc services:
+```bash
+cd build/
+./hello_ipc
+```
