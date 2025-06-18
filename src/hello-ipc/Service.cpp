@@ -4,9 +4,8 @@
  */
 
 #include "Service.hpp"
-#include "Logger.hpp"
-#include <cstring>      // For memset
-#include <arpa/inet.h>  // For inet_pton
+#include <cstring>
+#include <arpa/inet.h>
 
 /**
  * @brief Constructs a Service object and establishes a TCP connection to the specified IP and port.
@@ -15,13 +14,14 @@
  * @param port The port number of the server.
  * @throws std::runtime_error if socket creation, address conversion, or connection fails.
  */
-Service::Service(const std::string& ip, int port)
-    : ip_(ip), port_(port)
-{
+Service::Service(const std::string &ip, int port, const std::string &serviceName)
+    : logger_(serviceName), ip_(ip), port_(port) {
+
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
         throw std::runtime_error("Failed to create socket");
     }
+    logger_.log("Started socket");
 
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
@@ -36,6 +36,8 @@ Service::Service(const std::string& ip, int port)
         close(sockfd);
         throw std::runtime_error("Connection failed");
     }
+
+    logger_.log("New connection established to " + ip + ":" + std::to_string(port));
 }
 
 Service::~Service() {
@@ -50,11 +52,14 @@ Service::~Service() {
  * @param message The message to send.
  * @throws std::runtime_error if sending the message fails.
  */
-void Service::sendMessage(const std::string& message) const {
+void Service::sendMessage(const std::string &message) const {
     ssize_t sent = send(sockfd, message.c_str(), message.size(), 0);
+
     if (sent < 0) {
         throw std::runtime_error("Failed to send message");
     }
+
+    logger_.log("Sent message: " + message);
 }
 
 /** 
@@ -66,10 +71,14 @@ void Service::sendMessage(const std::string& message) const {
 std::string Service::receiveMessage() const {
     char buffer[1024] = {0};
     ssize_t received = recv(sockfd, buffer, sizeof(buffer) - 1, 0);
+
     if (received < 0) {
         throw std::runtime_error("Failed to receive message");
     }
-    return std::string(buffer, received);
+
+    std::string message(buffer, received);
+    logger_.log("Received message: " + message);
+    return message;
 }
 
 /**
@@ -81,10 +90,12 @@ std::string Service::receiveMessage() const {
  * @param msg The message string to parse.
  * @return A pair containing the key and value.
  */
-std::pair<std::string, std::string> Service::parseKeyValue(const std::string& msg) {
+std::pair<std::string, std::string> Service::parseKeyValue(const std::string &msg) {
     size_t pos = msg.find('=');
+
     if (pos == std::string::npos) {
         return {msg, ""};
     }
+
     return {msg.substr(0, pos), msg.substr(pos + 1)};
 }

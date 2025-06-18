@@ -5,6 +5,7 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <stdexcept>
+#include "Logger.hpp"
 
 /**
  * @file Service.hpp
@@ -15,19 +16,21 @@ public:
     virtual ~Service();
 
     // Sends a message to the IPC system
-    void sendMessage(const std::string& message) const;
+    void sendMessage(const std::string &message) const;
 
     // Receives a message from the IPC system
     std::string receiveMessage() const;
-    
+
     // Helper to parse key-value from received message
-    static std::pair<std::string, std::string> parseKeyValue(const std::string& msg);
+    static std::pair<std::string, std::string> parseKeyValue(const std::string &msg);
 
 protected:
-    Service(const std::string& ip, int port);
+    Service(const std::string &ip, int port, const std::string &serviceName);
 
     int sockfd;
     struct sockaddr_in server_addr;
+
+    Logger logger_; // Logger instance for logging messages
 
 private:
     std::string ip_;
