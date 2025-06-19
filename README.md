@@ -51,7 +51,7 @@ ctest -V
 
 For code coverage, after running tests:
 ```bash
-gcovr -r .. --exclude main.cpp --exclude _deps
+gcovr -r .. --exclude ../src/main.cpp --exclude _deps
 ```
 
 ## Running the project
@@ -60,12 +60,15 @@ Once you have built the project, you'll be able to find the application's binary
 
 ### Starting the socket server
 
+In one terminal you can start the tcp socket as server:
 ```bash
 cd build/
 ./hello_ipc --server
 ```
 
-### Starting the hello_ipc services:
+### Starting the hello_ipc services
+
+Then you can run the services:
 ```bash
 cd build/
 ./hello_ipc
