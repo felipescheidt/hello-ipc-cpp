@@ -1,6 +1,8 @@
 #include <filesystem>
 #include "LedManager.hpp"
 #include "Logger.hpp"
+#include <iostream>
+#include <fstream>
 
 /**
  * @file LedManager.cpp
@@ -48,7 +50,7 @@ void LedManager::updateLedState(const std::string &message) {
         return;
     }
 
-    ledFile << (ledState == "on" ? "1" : "0");
+    ledFile << (ledState == "on" ? "1" : "0") << '\n';
     ledFile.close();
 
     logger_.log("Updated LED " + ledNum + " to state: " + ledState);

@@ -21,7 +21,7 @@ class UpdateLed : public Service {
     private:
         friend class UpdateLedTest;
         void handleArguments();
-        void handleUserInput();
+        void handleUserInput(std::istream& inputStream);
         void sendUpdate(const std::string &ledName, const std::string &ledState);
 
         int argc_;

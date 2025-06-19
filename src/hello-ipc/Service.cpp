@@ -175,23 +175,31 @@ void Service::run_server(int port) {
 
         std::cout << "New client connected." << std::endl;
 
-        // Inner loop to handle all messages from the connected client
-        while (true) {
-            char buffer[1024] = {0};
-            ssize_t bytes_read = read(new_socket, buffer, 1024);
+        std::string buffer;
+        char read_buffer[1024];
 
-            // If read() returns 0, the client has closed the connection.
-            // If it returns < 0, an error occurred.
-            if (bytes_read <= 0) {
-                break; // Exit the inner loop to close this client's socket
+        // Loop to receive all data from this client
+        while (true) {
+            ssize_t received = recv(new_socket, read_buffer, sizeof(read_buffer), 0);
+
+            if (received <= 0) {
+                std::cout << "Client disconnected." << std::endl;
+                close(new_socket);
+                break; // Exit recv loop, go back to accept()
             }
 
-            std::string message(buffer, bytes_read);
-            std::cout << "Server received: " << message << std::endl;
-            try {
-                ledManager.updateLedState(message);
-            } catch (const std::exception& e) {
-                std::cerr << "Error processing message: " << e.what() << std::endl;
+            // Append received data to our persistent buffer
+            buffer.append(read_buffer, received);
+
+            // Process all complete messages (lines) in the buffer
+            size_t pos;
+            while ((pos = buffer.find('\n')) != std::string::npos) {
+                std::string message = buffer.substr(0, pos);
+                buffer.erase(0, pos + 1); // Erase the message and the newline
+
+                if (!message.empty()) {
+                    ledManager.updateLedState(message);
+                }
             }
         }
 

@@ -3,6 +3,12 @@
 #include <fstream>
 #include "LedManager.hpp"
 
+/** @file LedManagerTests.cpp
+ * @brief Unit tests for the LedManager class.
+ *
+ * This file contains unit tests for the LedManager class, which is responsible for managing LED states via IPC.
+ * The tests cover directory creation, file writing, and error handling.
+ */
 class LedManagerTest : public ::testing::Test {
 protected:
     std::string ledName = "123";
@@ -10,8 +16,15 @@ protected:
     std::string filePath = ledDir + "/brightness";
 
     void SetUp() override {
-        // Ensure the directory is clean before each test
         if (std::filesystem::exists(ledDir)) {
+            std::filesystem::remove_all(ledDir);
+        }
+    }
+
+    void TearDown() override {
+        // Ensure permissions are restored for cleanup
+        if (std::filesystem::exists(ledDir)) {
+            std::filesystem::permissions(ledDir, std::filesystem::perms::owner_all);
             std::filesystem::remove_all(ledDir);
         }
     }
@@ -19,22 +32,19 @@ protected:
 
 TEST_F(LedManagerTest, InvalidMessageFormat) {
     LedManager manager;
-    // Should not throw, just return
     EXPECT_NO_THROW(manager.updateLedState("invalidmessage"));
     EXPECT_FALSE(std::filesystem::exists(ledDir));
 }
 
 TEST_F(LedManagerTest, DirectoryIsCreated) {
     LedManager manager;
-    std::string msg = ledName + "=on";
-    manager.updateLedState(msg);
+    manager.updateLedState(ledName + "=on");
     EXPECT_TRUE(std::filesystem::exists(ledDir));
 }
 
 TEST_F(LedManagerTest, LedStateOnCreatesFileWithOne) {
     LedManager manager;
-    std::string msg = ledName + "=on";
-    manager.updateLedState(msg);
+    manager.updateLedState(ledName + "=on");
     std::ifstream file(filePath);
     std::string content;
     std::getline(file, content);
@@ -43,8 +53,7 @@ TEST_F(LedManagerTest, LedStateOnCreatesFileWithOne) {
 
 TEST_F(LedManagerTest, LedStateOffCreatesFileWithZero) {
     LedManager manager;
-    std::string msg = ledName + "=off";
-    manager.updateLedState(msg);
+    manager.updateLedState(ledName + "=off");
     std::ifstream file(filePath);
     std::string content;
     std::getline(file, content);
@@ -53,7 +62,6 @@ TEST_F(LedManagerTest, LedStateOffCreatesFileWithZero) {
 
 TEST_F(LedManagerTest, EmptyLedNameOrState) {
     LedManager manager;
-    
     EXPECT_NO_THROW(manager.updateLedState("="));
     EXPECT_NO_THROW(manager.updateLedState("led="));
     EXPECT_NO_THROW(manager.updateLedState("=on"));
@@ -62,26 +70,38 @@ TEST_F(LedManagerTest, EmptyLedNameOrState) {
 
 TEST_F(LedManagerTest, LedStateChangeUpdatesFile) {
     LedManager manager;
-    std::string msgOn = ledName + "=on";
-    std::string msgOff = ledName + "=off";
-
-    // Set LED to "on"
-    manager.updateLedState(msgOn);
+    manager.updateLedState(ledName + "=on");
     {
         std::ifstream file(filePath);
         std::string content;
         std::getline(file, content);
         EXPECT_EQ(content, "1");
     }
-
-    // Change LED to "off"
-    manager.updateLedState(msgOff);
+    manager.updateLedState(ledName + "=off");
     {
         std::ifstream file(filePath);
         std::string content;
         std::getline(file, content);
         EXPECT_EQ(content, "0");
     }
+}
+
+TEST_F(LedManagerTest, HandlesDirectoryCreationError) {
+    std::string parentDir = "/tmp/sys/class";
+    std::filesystem::create_directories(parentDir);
+    std::ofstream(ledDir);
+    
+    LedManager manager;
+    EXPECT_NO_THROW(manager.updateLedState(ledName + "=on"));
+}
+
+TEST_F(LedManagerTest, HandlesFileOpenError) {
+    std::filesystem::create_directories(ledDir);
+    std::filesystem::permissions(ledDir, std::filesystem::perms::owner_read | std::filesystem::perms::owner_exec);
+
+    LedManager manager;
+    EXPECT_NO_THROW(manager.updateLedState(ledName + "=on"));
+    EXPECT_FALSE(std::filesystem::exists(filePath));
 }
 
 int main(int argc, char **argv) {

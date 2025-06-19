@@ -27,7 +27,7 @@ void UpdateLed::run() {
     if (argc_ > 1) {
         handleArguments();
     }
-    handleUserInput();
+    handleUserInput(std::cin); // Use std::cin for real console input
 }
 
 /**
@@ -55,7 +55,7 @@ void UpdateLed::handleArguments() {
  * This method prompts the user for input to turn LEDs on or off by entering commands
  * like '1' for on, '!1' for off, or 'exit' to quit the loop.
  */
-void UpdateLed::handleUserInput() {
+void UpdateLed::handleUserInput(std::istream& inputStream) {
     std::cout << "Welcome to the UpdateLed client!" << std::endl;
     std::cout << "Usage:" << std::endl;
     std::cout << "  '1' for led1=on" << std::endl;
@@ -64,10 +64,11 @@ void UpdateLed::handleUserInput() {
 
     std::string input;
     while (true) {
-        std::cout << "Enter command: ";
-        std::getline(std::cin, input);
+        if (&inputStream == &std::cin) { // Only print prompt for real console
+            std::cout << "Enter command: ";
+        }
 
-        if (input == "exit") {
+        if (!std::getline(inputStream, input) || input == "exit") {
             break;
         }
 
@@ -115,7 +116,7 @@ void UpdateLed::sendUpdate(const std::string& ledName, const std::string& ledSta
         return;
     }
 
-    std::string message = ledName + "=" + ledState;
+    std::string message = ledName + "=" + ledState + "\n";
     sendMessage(message);
     logger_.log("Sent update for LED " + ledName + " to state: " + ledState);
 }
