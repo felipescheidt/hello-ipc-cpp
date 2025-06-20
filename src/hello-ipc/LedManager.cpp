@@ -1,57 +1,75 @@
-#include <filesystem>
 #include "LedManager.hpp"
-#include "Logger.hpp"
-#include <iostream>
+#include <filesystem>
 #include <fstream>
+#include <iostream>
+
+/** * @file LedManager.cpp
+ * @brief Implementation of the LedManager service that manages LED states.
+ *
+ * This class connects to a message broker and listens for LED state update commands.
+ * It updates the LED state by writing to the appropriate file in the /tmp/sys/class/led_<led_num> directory.
+ */
+LedManager::LedManager() : Service("LedManager") {}
+
 
 /**
- * @file LedManager.cpp
- * @brief Implementation of the LedManager class to manage LED states via IPC.
+ * @brief Runs the LedManager service.
  *
- * This class provides methods to update the state of an LED based on received messages.
+ * This method connects to the message broker and listens for LED state update commands.
+ * It updates the LED state by writing to the appropriate file in the /tmp/sys/class/led_<led_num> directory.
+ *
+ * @param ip The IP address of the message broker.
+ * @param port The port number of the message broker.
  */
-LedManager::LedManager(const std::string &ip, int port)
-    : Service(ip, port, "LedManager") {
-    logger_.log("LedManager initialized with IP: " + ip + " and port: " + std::to_string(port));
+void LedManager::run(const std::string& ip, int port) {
+    connectToServer(ip, port);
+    logger_.log("Connected to broker. Registering as subscriber.");
+
+    // Announce to the broker that we are a subscriber
+    sendMessage("SUBSCRIBE\n");
+
+    logger_.log("Subscription successful. Waiting for commands...");
+    while (true) {
+        try {
+            std::string message = receiveMessage();
+            updateLedState(message);
+        } catch (const std::runtime_error& e) {
+            logger_.log("Disconnected from broker: " + std::string(e.what()));
+            break;
+        }
+    }
 }
 
 /**
- * @brief Updates the state of the LED based on the received message.
+ * @brief Updates the LED state based on the received message.
  *
- * This method parses the message to extract the LED name and state, creates the necessary directory
- * if it does not exist, and writes the state to a file named "brightness" in that directory.
+ * This method parses the message to extract the LED number and state,
+ * then writes the state to the appropriate file in the /tmp/sys/class/led_<led_num> directory.
  *
- * @param message The message containing the LED state to update in the format "ledNum=state".
+ * @param message The message containing the LED number and state in the format "led_num=state".
  */
 void LedManager::updateLedState(const std::string &message) {
     auto [ledNum, ledState] = Service::parseKeyValue(message);
-
     if (ledNum.empty() || ledState.empty()) {
         std::cerr << "Invalid message format: " << message << std::endl;
         return;
     }
-
-    //if folder /tmp/sys/class/led_<ledNum> does not exist, create it
+    // ... (rest of the file writing logic is the same) ...
     std::string ledDir = "/tmp/sys/class/led_" + ledNum;
-    if (!std::filesystem::exists(ledDir)) {
-        try {
+    try {
+        if (!std::filesystem::exists(ledDir)) {
             std::filesystem::create_directories(ledDir);
-            logger_.log("Created directory for LED: " + ledDir);
-        } catch (const std::filesystem::filesystem_error &e) {
-            std::cerr << "Error creating directory: " << e.what() << std::endl;
-            return;
         }
+    } catch (const std::filesystem::filesystem_error &e) {
+        std::cerr << "Failed to create directory: " << ledDir << " - " << e.what() << std::endl;
+        return;
     }
     std::string filePath = ledDir + "/brightness";
     std::ofstream ledFile(filePath);
-
     if (!ledFile.is_open()) {
-        std::cerr << "Error opening file: " << filePath << std::endl;
+        std::cerr << "Failed to open file: " << filePath << std::endl;
         return;
     }
-
     ledFile << (ledState == "on" ? "1" : "0") << '\n';
-    ledFile.close();
-
-    logger_.log("Updated LED " + ledNum + " to state: " + ledState);
+    logger_.log("Processed command. Updated LED " + ledNum + " to state: " + ledState);
 }

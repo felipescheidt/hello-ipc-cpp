@@ -1,42 +1,47 @@
+#include "UpdateLed.hpp"
+#include "LedManager.hpp"
+#include "Service.hpp" // Include Service to run the broker
 #include <iostream>
 #include <string>
-#include "Service.hpp"
-#include "LedManager.hpp"
-#include "UpdateLed.hpp"
-#include "Logger.hpp"
+#include <vector>
 
+// Constants for the broker connection
+const int BROKER_PORT = 8080;
+const std::string BROKER_IP = "127.0.0.1";
 
-/** * @file main.cpp
- * @brief Main entry point for the IPC application.
+/** * @brief Main entry point for the application.
  *
- * This file contains the main function that initializes the application,
- * determines whether to run as a server or client, and starts the appropriate service.
+ * This function checks command-line arguments to determine if it should run as a broker or a LED manager.
+ * If no arguments are provided, it defaults to running the UpdateLed client.
+ *
+ * @param argc The number of command-line arguments.
+ * @param argv The array of command-line arguments.
+ * @return Exit status code.
  */
 int main(int argc, char* argv[]) {
-    const std::string ip = "127.0.0.1";
-    const int port = 12345;
-
-    // Check if the first argument is "--server" to decide the role
-    if (argc > 1 && std::string(argv[1]) == "--server") {
-        // Run as the LedManager server by calling the static method
-        std::cout << "Starting LedManager server..." << std::endl;
-        Service::run_server(port);
-    } else {
-        // Run as the UpdateLed client
-        std::cout << "Starting UpdateLed client..." << std::endl;
-        try {
-            // Create the client. This will connect to the server.
-            UpdateLed updateLed(ip, port, argc, argv);
-
-            // Call run() to start the argument processing and the interactive loop
-            updateLed.run();
-
-        } catch (const std::exception& e) {
-            std::cerr << "An error occurred in the client: " << e.what() << std::endl;
-            return 1;
+    if (argc > 1) {
+        std::string mode = argv[1];
+        if (mode == "--broker") {
+            // Create a Service instance and run it as a broker
+            Service broker("Broker");
+            broker.runAsBroker(BROKER_PORT);
+            return 0;
+        }
+        if (mode == "--led-manager") {
+            LedManager ledManager;
+            ledManager.run(BROKER_IP, BROKER_PORT);
+            return 0;
         }
     }
 
-    std::cout << "Application finished." << std::endl;
+    // Default mode is the UpdateLed client
+    try {
+        UpdateLed client(BROKER_IP, BROKER_PORT, argc, argv);
+        client.run();
+    } catch (const std::runtime_error& e) {
+        std::cerr << "Client Error: " << e.what() << std::endl;
+        return 1;
+    }
+
     return 0;
 }

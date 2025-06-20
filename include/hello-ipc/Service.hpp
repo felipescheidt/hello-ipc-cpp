@@ -8,40 +8,45 @@
 #include <cstring>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <thread>
+#include <mutex>
+#include <vector>
+#include <utility>
+#include <iostream>
 #include "Logger.hpp"
 
-/**
- * @file Service.hpp
- * @brief Abstract base class for IPC services using TCP/IP sockets.
+/** * @file Service.hpp
+ * @brief Base class for IPC services using TCP/IP sockets.
+ *
+ * This class provides methods for connecting to a server, sending and receiving messages,
+ * and running as a broker service.
  */
 class Service {
     public:
-        Service(const std::string &ip, int port, const std::string &serviceName, bool testMode = false);
+        Service(const std::string &serviceName);
         virtual ~Service();
 
-        // Sends a message to the IPC system
-        virtual void sendMessage(const std::string &message) const;
+        // --- Client Methods ---
+        void connectToServer(const std::string &ip, int port);
+        void sendMessage(const std::string &message) const;
+        std::string receiveMessage();
 
-        // Receives a message from the IPC system
-        std::string receiveMessage() const;
+        // --- Broker Method ---
+        void runAsBroker(int port);
 
-        // Helper to parse key-value from received message
+        // --- Utility Method ---
         static std::pair<std::string, std::string> parseKeyValue(const std::string &msg);
 
-        // Runs the server on the specified port
-        static void run_server(int port);
-
     protected:
-        void setupSocket(const std::string &ip, int port);
-
+        Logger logger_;
         int sockfd;
-        struct sockaddr_in server_addr;
-
-        Logger logger_; // Logger instance for logging messages
+        std::string receive_buffer_;
 
     private:
-        std::string ip_;
-        int port_;
+        // --- Broker-specific members ---
+        void handleBrokerClient(int client_socket);
+        std::vector<int> subscribers_;
+        std::mutex subscribers_mutex_;
 };
 
 #endif // HELLO_IPC_SERVICE_HPP_

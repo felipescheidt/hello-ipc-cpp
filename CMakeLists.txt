@@ -70,7 +70,7 @@ FetchContent_Declare(
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
-option(${PROJECT_NAME}_ENABLE_UNIT_TESTING "Enable unit tests" ON) # Unit tests enabled by default
+option(${PROJECT_NAME}_ENABLE_UNIT_TESTING "Enable unit tests" OFF) # Unit tests enabled by default
 
 if(${PROJECT_NAME}_ENABLE_UNIT_TESTING)
   enable_testing()

@@ -1,21 +1,17 @@
 #ifndef HELLO_IPC_UPDATE_LED_HPP_
 #define HELLO_IPC_UPDATE_LED_HPP_
-#include "Service.hpp"
-#include "LedManager.hpp"
 #include <iostream>
 #include <vector>
+#include <iostream>
+#include <vector>
+#include "Service.hpp"
 
 /**
- * @file UpdateLed.hpp
- * @brief Class to update LED states via IPC.
- *
- * This class handles command-line arguments to activate LEDs and provides an interactive loop
- * for user input to update LED states.
+ * @brief A client application to send LED update commands via IPC.
  */
 class UpdateLed : public Service {
     public:
-        UpdateLed(const std::string &ip, int port, int argc, char **argv, bool testMode = false);
-
+        UpdateLed(const std::string &ip, int port, int argc, char **argv);
         void run();
 
     private:

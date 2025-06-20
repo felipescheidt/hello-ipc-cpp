@@ -2,22 +2,19 @@
 #define HELLO_IPC_LED_MANAGER_HPP_
 #include "Service.hpp"
 
-/**
- * @file LedManager.hpp
- * @brief Class to manage LED states via IPC.
+/** * @file LedManager.hpp
+ * @brief A service that manages LED states by receiving commands from a broker.
  *
- * This class provides methods to update the state of an LED based on received messages.
+ * This class connects to a message broker and listens for LED state update commands.
+ * It updates the LED state by writing to the appropriate file in the /tmp/sys/class/led_<led_num> directory.
  */
 class LedManager : public Service {
     public:
-        LedManager(const std::string &ip, int port);
-        void updateLedState(const std::string &message);
+        LedManager();
+        void run(const std::string& ip, int port);
 
-        /**
-         * @brief Default constructor for LedManager, initializes with default IP and port.
-         * This constructor is used for testing purposes.
-         */
-        LedManager() : Service("0.0.0.0", 0, "LedManager", true) {}
+    private:
+        void updateLedState(const std::string &message);
 };
 
 #endif // HELLO_IPC_LED_MANAGER_HPP_
