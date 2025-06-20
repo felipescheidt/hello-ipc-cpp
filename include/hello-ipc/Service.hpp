@@ -5,6 +5,9 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <stdexcept>
+#include <cstring>
+#include <arpa/inet.h>
+#include <sys/socket.h>
 #include "Logger.hpp"
 
 /**

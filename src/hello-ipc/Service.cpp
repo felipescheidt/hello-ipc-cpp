@@ -4,9 +4,6 @@
  */
 
 #include "Service.hpp"
-#include <cstring>
-#include <arpa/inet.h>
-#include <sys/socket.h>
 #include "LedManager.hpp"
 
 /**
