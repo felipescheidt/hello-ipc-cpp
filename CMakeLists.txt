@@ -6,7 +6,7 @@ endif()
 
 project(
   "hello_ipc"
-  VERSION 0.0.0
+  VERSION 0.0.1
   LANGUAGES CXX
 )
 
@@ -15,7 +15,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Create a library for the hello_ipc code
 add_library(hello_ipc_lib
-  STATIC
+  SHARED
   src/hello-ipc/Service.cpp
   src/hello-ipc/LedManager.cpp
   src/hello-ipc/UpdateLed.cpp
@@ -80,4 +80,34 @@ if(${PROJECT_NAME}_ENABLE_UNIT_TESTING)
   enable_testing()
   message(STATUS "Build unit tests for the project. Tests should always be found in the test folder\n")
   add_subdirectory(test)
+endif()
+
+
+#
+# Custom target for code coverage
+#
+
+if(${PROJECT_NAME}_ENABLE_CODE_COVERAGE)
+  find_program(GCOVR_EXECUTABLE gcovr)
+
+  if(NOT GCOVR_EXECUTABLE)
+    message(FATAL_ERROR "gcovr not found! Please install it to use the coverage target.")
+  endif()
+
+  add_custom_target(coverage
+    COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
+    COMMAND ${GCOVR_EXECUTABLE}
+            -r ${CMAKE_SOURCE_DIR}
+            --exclude ${CMAKE_SOURCE_DIR}/src/main.cpp
+            --exclude _deps
+            --exclude test
+    COMMAND ${GCOVR_EXECUTABLE}
+            -r ${CMAKE_SOURCE_DIR}
+            --exclude ${CMAKE_SOURCE_DIR}/src/main.cpp
+            --exclude _deps
+            --exclude test
+            --html --html-details -o coverage.html
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "Running tests and generating code coverage report (console + HTML)"
+  )
 endif()
