@@ -49,7 +49,7 @@ cmake --build .
 ctest -V
 ```
 
-For code coverage, after running tests:
+For test and code coverage:
 ```bash
 mkdir build/ && cd build/
 cmake -DCMAKE_BUILD_TYPE=Debug -Dhello_ipc_ENABLE_UNIT_TESTING=ON -Dhello_ipc_ENABLE_CODE_COVERAGE=ON ..

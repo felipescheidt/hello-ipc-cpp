@@ -23,7 +23,7 @@ void print_usage() {
  * @brief Main entry point for the hello-ipc application.
  *
  * This function initializes the application based on the provided mode.
- * It can run either the LedManager server or the UpdateLed client.
+ * It can run either the LedManager server, the UpdateLed client or the QueryLed client.
  *
  * @param argc Argument count.
  * @param argv Argument vector.

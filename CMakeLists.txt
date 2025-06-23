@@ -6,7 +6,7 @@ endif()
 
 project(
   "hello_ipc"
-  VERSION 0.0.1
+  VERSION 0.0.2
   LANGUAGES CXX
 )
 
@@ -102,12 +102,13 @@ if(${PROJECT_NAME}_ENABLE_CODE_COVERAGE)
             --exclude ${CMAKE_SOURCE_DIR}/src/main.cpp
             --exclude _deps
             --exclude test
+    COMMAND mkdir -p coverage
     COMMAND ${GCOVR_EXECUTABLE}
             -r ${CMAKE_SOURCE_DIR}
             --exclude ${CMAKE_SOURCE_DIR}/src/main.cpp
             --exclude _deps
             --exclude test
-            --html --html-details -o coverage.html
+            --html --html-details -o coverage/coverage.html
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     COMMENT "Running tests and generating code coverage report (console + HTML)"
   )

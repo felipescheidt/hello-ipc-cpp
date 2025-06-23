@@ -98,6 +98,7 @@ void Service::runServer(const std::string &socketPath,
         logger_.log("Accepted new connection.");
 
         // Spawn a new thread to handle the client
+        // The messageHandler is used to process incoming messages and send responses
         std::thread([this, client_socket, messageHandler]() {
             std::string buffer;
             char read_buffer[1024];

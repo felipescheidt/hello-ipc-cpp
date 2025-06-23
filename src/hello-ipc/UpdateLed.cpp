@@ -84,18 +84,14 @@ void UpdateLed::handleUserInput(std::istream &inputStream) {
             continue;
 
         std::string ledName, ledState;
-        if (input[0] == '!')
-        {
+        if (input[0] == '!'){
             ledState = "off";
             ledName = input.substr(1);
-        }
-        else
-        {
+        }  else {
             ledState = "on";
             ledName = input;
         }
-        if (ledName.empty() || !std::all_of(ledName.begin(), ledName.end(), ::isdigit))
-        {
+        if (ledName.empty() || !std::all_of(ledName.begin(), ledName.end(), ::isdigit)) {
             std::cerr << "Invalid command." << std::endl;
             continue;
         }
@@ -114,7 +110,7 @@ void UpdateLed::handleUserInput(std::istream &inputStream) {
  * @throws std::runtime_error if sending the message fails.
  */
 void UpdateLed::sendUpdate(const std::string &ledName, const std::string &ledState) {
-    std::string message = ledName + "=" + ledState + "\n";
+    std::string message = ledName + "=" + ledState + "\n"; // ex: "1=on\n"
     sendMessage(message);
     logger_.log("Sent update for LED " + ledName + " to state: " + ledState);
 }
