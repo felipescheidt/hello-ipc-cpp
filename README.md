@@ -60,18 +60,31 @@ cmake --build . && cmake --build . --target coverage
 
 Once you have built the project, you'll be able to find the application's binary at build folder.
 
-### Starting the socket server
+### Starting the LedManager service
 
-In one terminal you can start the tcp socket as server:
+In terminal 1 you need to start the LedManager service (socket: server mode):
 ```bash
 cd build/
-./hello_ipc --server
+./hello_ipc --led-manager
 ```
 
-### Starting the hello_ipc services
+### Starting the UpdateLed service:
 
-Then you can run the services:
+In terminal 2 you can start the UpdateLed service (socket: client mode):
 ```bash
 cd build/
-./hello_ipc
+./hello_ipc --update-led
+```
+Or
+```bash
+cd build/
+./hello_ipc --update-led --led1 --led2 --led3
+```
+
+### Starting the QueryLed service (optional):
+
+In terminal 3 you can start the QueryLed service (socket: client mode):
+```bash
+cd build/
+./hello_ipc --query-led
 ```
