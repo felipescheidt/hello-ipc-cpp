@@ -1,6 +1,8 @@
 # Hello IPC - cpp project
 
-This is a simple cpp project that uses socket for Inter-Process Communication (IPC) to manage some LEDs state.
+This project is a C++ implementation of an inter-process communication (IPC) system for controlling and querying LED states.
+
+It uses UNIX domain sockets for communication between a server (which manages LED states) and multiple clients (which can update or query those states).
 
 ## Getting started
 
