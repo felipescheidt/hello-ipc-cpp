@@ -1,47 +1,50 @@
 #ifndef HELLO_IPC_SERVICE_HPP_
 #define HELLO_IPC_SERVICE_HPP_
+
 #include <string>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <unistd.h>
-#include <stdexcept>
-#include <cstring>
-#include <arpa/inet.h>
-#include <sys/socket.h>
+#include <functional>
 #include "Logger.hpp"
 
-/**
+/** 
  * @file Service.hpp
- * @brief Abstract base class for IPC services using TCP/IP sockets.
+ * @brief Base class for IPC services using TCP/IP sockets.
+ *
+ * This class provides methods for sending and receiving messages, parsing key-value pairs,
+ * and managing the socket connection.
+ * 
+ * @param serviceName The name of the service for logging purposes.
+ * @throws std::runtime_error if the socket connection fails or sending/receiving messages fails.
  */
 class Service {
     public:
-        Service(const std::string &ip, int port, const std::string &serviceName, bool testMode = false);
+        explicit Service(const std::string &serviceName, bool connect = true);
         virtual ~Service();
 
-        // Sends a message to the IPC system
+        // For clients: sends a message.
         virtual void sendMessage(const std::string &message) const;
 
-        // Receives a message from the IPC system
-        std::string receiveMessage() const;
+        // For clients: receives a message.
+        virtual std::string receiveMessage();
 
-        // Helper to parse key-value from received message
+        // Helper to parse "key=value" messages.
         static std::pair<std::string, std::string> parseKeyValue(const std::string &msg);
 
-        // Runs the server on the specified port
-        static void run_server(int port);
-
     protected:
-        void setupSocket(const std::string &ip, int port);
+        // For clients: connects to a server at a given socket path.
+        void connectToServer(const std::string &socketPath);
 
+        // For servers: runs a multi-threaded server loop.
+        void runServer(const std::string &socketPath,
+                    const std::function<void(int, const std::string&)>& messageHandler);
+
+        // For servers: sends a response back to a specific client.
+        void sendResponse(int client_socket, const std::string& message) const;
+
+        Logger logger_;
         int sockfd;
-        struct sockaddr_in server_addr;
-
-        Logger logger_; // Logger instance for logging messages
 
     private:
-        std::string ip_;
-        int port_;
+        std::string receive_buffer_;
 };
 
 #endif // HELLO_IPC_SERVICE_HPP_

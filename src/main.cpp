@@ -1,42 +1,60 @@
-#include <iostream>
-#include <string>
-#include "Service.hpp"
 #include "LedManager.hpp"
 #include "UpdateLed.hpp"
-#include "Logger.hpp"
+#include "QueryLed.hpp"
+#include <iostream>
+#include <string>
+#include <vector>
 
+/**
+ * @brief Path to the socket file for the LedManager service.
+ * 
+ */
+const std::string LED_MANAGER_SOCKET = "/tmp/led_manager.sock";
 
-/** * @file main.cpp
- * @brief Main entry point for the IPC application.
+void print_usage() {
+    std::cerr << "Usage: hello_ipc <mode> [options]\n"
+              << "Modes:\n"
+              << "  --led-manager    Run the LedManager server.\n"
+              << "  --update-led     Run the UpdateLed client.\n"
+              << "  --query-led      Run the QueryLed client.\n";
+}
+
+/** 
+ * @brief Main entry point for the hello-ipc application.
  *
- * This file contains the main function that initializes the application,
- * determines whether to run as a server or client, and starts the appropriate service.
+ * This function initializes the application based on the provided mode.
+ * It can run either the LedManager server or the UpdateLed client.
+ *
+ * @param argc Argument count.
+ * @param argv Argument vector.
+ * @return Exit status code.
  */
 int main(int argc, char* argv[]) {
-    const std::string ip = "127.0.0.1";
-    const int port = 12345;
-
-    // Check if the first argument is "--server" to decide the role
-    if (argc > 1 && std::string(argv[1]) == "--server") {
-        // Run as the LedManager server by calling the static method
-        std::cout << "Starting LedManager server..." << std::endl;
-        Service::run_server(port);
-    } else {
-        // Run as the UpdateLed client
-        std::cout << "Starting UpdateLed client..." << std::endl;
-        try {
-            // Create the client. This will connect to the server.
-            UpdateLed updateLed(ip, port, argc, argv);
-
-            // Call run() to start the argument processing and the interactive loop
-            updateLed.run();
-
-        } catch (const std::exception& e) {
-            std::cerr << "An error occurred in the client: " << e.what() << std::endl;
-            return 1;
-        }
+    if (argc < 2) {
+        print_usage();
+        return 1;
     }
 
-    std::cout << "Application finished." << std::endl;
+    std::string mode = argv[1];
+
+    try {
+        if (mode == "--led-manager") {
+            LedManager server;
+            server.run(LED_MANAGER_SOCKET);
+        } else if (mode == "--update-led") {
+            UpdateLed client(LED_MANAGER_SOCKET, argc, argv);
+            client.run();
+        } else if (mode == "--query-led") {
+            QueryLed client(LED_MANAGER_SOCKET);
+            client.run();
+        } else {
+            print_usage();
+            return 1;
+        }
+    } catch (const std::runtime_error &e) {
+        std::cerr << "Runtime Error: " << e.what() << std::endl;
+        return 1;
+    }
+
     return 0;
 }

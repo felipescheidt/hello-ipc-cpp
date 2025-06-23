@@ -20,6 +20,7 @@ add_library(hello_ipc_lib
   src/hello-ipc/LedManager.cpp
   src/hello-ipc/UpdateLed.cpp
   src/hello-ipc/Logger.cpp
+  src/hello-ipc/QueryLed.cpp
 )
 
 # Ensure the library and anything linking to it can find the headers
@@ -32,6 +33,9 @@ target_include_directories(hello_ipc_lib
 add_executable(hello_ipc
   src/main.cpp
 )
+
+# Find the threads library
+find_package(Threads REQUIRED)
 
 # Link the main executable against the hello_ipc library
 target_link_libraries(hello_ipc PRIVATE hello_ipc_lib)
@@ -74,14 +78,11 @@ FetchContent_Declare(
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
-option(${PROJECT_NAME}_ENABLE_UNIT_TESTING "Enable unit tests" ON) # Unit tests enabled by default
-
 if(${PROJECT_NAME}_ENABLE_UNIT_TESTING)
   enable_testing()
   message(STATUS "Build unit tests for the project. Tests should always be found in the test folder\n")
   add_subdirectory(test)
 endif()
-
 
 #
 # Custom target for code coverage
