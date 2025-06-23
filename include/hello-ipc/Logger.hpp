@@ -31,7 +31,7 @@ class Logger {
         ~Logger();
 
     private:
-        void openLogFile(const std::string& serviceName);
+        void openLogFile(const std::string &serviceName);
         std::string logFilePath_;
         std::string serviceName_;
         mutable std::ofstream logFile_;

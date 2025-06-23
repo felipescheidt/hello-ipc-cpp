@@ -1,63 +1,36 @@
-/**
+/** 
  * @file Service.cpp
- * @brief Implementation of the Service base class for IPC using TCP/IP sockets.
+ * @brief Implementation of the Service class for IPC using TCP/IP sockets.
+ *
+ * This file contains the implementation of methods for sending and receiving messages,
+ * connecting to a server, and running a multi-threaded server loop.
  */
 
 #include "Service.hpp"
-#include "LedManager.hpp"
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <unistd.h>
+#include <stdexcept>
+#include <cstring>
+#include <iostream>
+#include <thread>
+#include <vector>
 
-/**
- * @brief Constructs a Service object and establishes a TCP connection to the specified IP and port.
- * 
- * @param ip The IP address of the server.
- * @param port The port number of the server.
- * @throws std::runtime_error if socket creation, address conversion, or connection fails.
+/** 
+ * @brief Constructs a Service with the given service name.
+ *
+ * Initializes the logger and sets the socket file descriptor to -1 (not connected).
+ *
+ * @param serviceName The name of the service for logging purposes.
  */
-Service::Service(const std::string &ip, int port, const std::string &serviceName, bool testMode)
-    : logger_(serviceName), ip_(ip), port_(port) {
-
-    if (!testMode) {
-        setupSocket(ip, port);
-    }
+Service::Service(const std::string &serviceName, bool connect)
+            : logger_(serviceName), sockfd(-1) {
+    (void)connect; // Suppress unused parameter warning
 }
 
-/**
- * @brief Sets up the socket connection to the specified IP and port.
- * 
- * This method creates a socket, sets up the server address structure, and connects to the server.
- * 
- * @param ip The IP address of the server.
- * @param port The port number of the server.
- * @throws std::runtime_error if socket creation, address conversion, or connection fails.
- */
-void Service::setupSocket(const std::string &ip, int port) {
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0) {
-        throw std::runtime_error("Failed to create socket");
-    }
-    logger_.log("Started socket");
 
-    memset(&server_addr, 0, sizeof(server_addr));
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(port);
-
-    if (inet_pton(AF_INET, ip.c_str(), &server_addr.sin_addr) <= 0) {
-        close(sockfd);
-        throw std::runtime_error("Invalid IP address");
-    }
-
-    if (connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
-        close(sockfd);
-        throw std::runtime_error("Connection failed");
-    }
-
-    logger_.log("New connection established to " + ip + ":" + std::to_string(port));
-}
-
-/**
- * @brief Destructor for the Service class.
- * 
- * Closes the socket if it is open.
+/** 
+ * @brief Destructor closes the socket if it is open.
  */
 Service::~Service() {
     if (sockfd >= 0) {
@@ -65,143 +38,151 @@ Service::~Service() {
     }
 }
 
-/**
- * @brief Sends a message to the IPC system.
- * 
- * @param message The message to send.
- * @throws std::runtime_error if sending the message fails.
+/** 
+ * @brief Connects to a server at the specified socket path.
+ *
+ * @param socketPath The path to the socket file.
+ * @throws std::runtime_error if the connection fails.
  */
-void Service::sendMessage(const std::string &message) const {
-    ssize_t sent = send(sockfd, message.c_str(), message.size(), 0);
+void Service::connectToServer(const std::string &socketPath) {
+    sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (sockfd < 0) throw std::runtime_error("Failed to create socket");
 
-    if (sent < 0) {
-        throw std::runtime_error("Failed to send message");
+    struct sockaddr_un server_addr;
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sun_family = AF_UNIX;
+    strncpy(server_addr.sun_path, socketPath.c_str(), sizeof(server_addr.sun_path) - 1);
+
+    if (connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
+        throw std::runtime_error("Connection failed to " + socketPath);
     }
-
-    logger_.log("Sent message: " + message);
+    logger_.log("Connection established to " + socketPath);
 }
 
 /** 
- * @brief Receives a message from the IPC system.
- * 
- * @return The received message as a string.
- * @throws std::runtime_error if receiving the message fails.
+ * @brief Runs a multi-threaded server loop that listens for incoming connections.
+ *
+ * @param socketPath The path to the socket file.
+ * @param messageHandler A function to handle incoming messages from clients.
  */
-std::string Service::receiveMessage() const {
-    char buffer[1024] = {0};
-    ssize_t received = recv(sockfd, buffer, sizeof(buffer) - 1, 0);
+void Service::runServer(const std::string &socketPath,
+                        const std::function<void(int, const std::string&)> &messageHandler) {
+    // Ensure the socket file does not already exist
+    unlink(socketPath.c_str());
 
-    if (received < 0) {
-        throw std::runtime_error("Failed to receive message");
+    int server_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (server_fd < 0) {
+        perror("socket failed"); exit(EXIT_FAILURE);
     }
 
-    std::string message(buffer, received);
-    logger_.log("Received message: " + message);
+    struct sockaddr_un address;
+    memset(&address, 0, sizeof(address));
+    address.sun_family = AF_UNIX;
+    strncpy(address.sun_path, socketPath.c_str(), sizeof(address.sun_path) - 1);
+
+    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
+        perror("bind failed"); exit(EXIT_FAILURE);
+    }
+
+    if (listen(server_fd, 10) < 0) {
+        perror("listen"); exit(EXIT_FAILURE);
+    }
+
+    logger_.log("Server listening on socket: " + socketPath);
+
+    while (true) {
+        int client_socket = accept(server_fd, NULL, NULL);
+        if (client_socket < 0) {
+            perror("accept"); continue;
+        }
+        logger_.log("Accepted new connection.");
+
+        // Spawn a new thread to handle the client
+        std::thread([this, client_socket, messageHandler]() {
+            std::string buffer;
+            char read_buffer[1024];
+            while (true) {
+                ssize_t received = recv(client_socket, read_buffer, sizeof(read_buffer) - 1, 0);
+                if (received <= 0) break;
+
+                buffer.append(read_buffer, received);
+                size_t pos;
+                while ((pos = buffer.find('\n')) != std::string::npos) {
+                    std::string message = buffer.substr(0, pos);
+                    buffer.erase(0, pos + 1);
+                    if (!message.empty()) {
+                        messageHandler(client_socket, message);
+                    }
+                }
+            }
+            logger_.log("Client disconnected.");
+            close(client_socket);
+        }).detach();
+    }
+}
+
+/** 
+ * @brief Sends a message to the connected server.
+ *
+ * @param message The message to send.
+ * @throws std::runtime_error if the socket is not connected or sending fails.
+ */
+void Service::sendMessage(const std::string &message) const {
+    if (sockfd < 0) {
+        throw std::runtime_error("Not connected");
+    }
+    if (send(sockfd, message.c_str(), message.length(), 0) < 0) {
+        throw std::runtime_error("Failed to send message");
+    }
+}
+
+/** 
+ * @brief Sends a response back to a specific client.
+ *
+ * @param client_socket The socket file descriptor of the client.
+ * @param message The message to send as a response.
+ * @throws std::runtime_error if sending fails.
+ */
+void Service::sendResponse(int client_socket, const std::string &message) const {
+    if (send(client_socket, message.c_str(), message.length(), 0) < 0) {
+        logger_.log("Failed to send response to client.");
+        throw std::runtime_error("Failed to send response");
+    }
+}
+
+/** 
+ * @brief Receives a message from the connected server.
+ *
+ * @return The received message.
+ * @throws std::runtime_error if the connection is closed or receiving fails.
+ */
+std::string Service::receiveMessage() {
+    char read_buffer[1024] = {0};
+
+    while (receive_buffer_.find('\n') == std::string::npos) {
+        ssize_t bytes_received = recv(sockfd, read_buffer, sizeof(read_buffer) - 1, 0);
+        if (bytes_received <= 0) {
+            throw std::runtime_error("Connection closed by server.");
+        }
+        receive_buffer_.append(read_buffer, bytes_received);
+    }
+
+    size_t pos = receive_buffer_.find('\n');
+    std::string message = receive_buffer_.substr(0, pos);
+    receive_buffer_.erase(0, pos + 1);
     return message;
 }
 
-/**
- * @brief Parses a key-value pair from a message string.
- * 
- * The message is expected to be in the format "key=value". If no '=' is found,
- * the entire string is treated as the key with an empty value.
- * 
- * @param msg The message string to parse.
+/** 
+ * @brief Parses a "key=value" message into a key-value pair.
+ *
+ * @param msg The message to parse.
  * @return A pair containing the key and value.
  */
 std::pair<std::string, std::string> Service::parseKeyValue(const std::string &msg) {
     size_t pos = msg.find('=');
-
     if (pos == std::string::npos) {
         return {msg, ""};
     }
-
     return {msg.substr(0, pos), msg.substr(pos + 1)};
-}
-
-/**
- * @brief Runs the LedManager server on the specified port.
- * 
- * This method creates a TCP socket, binds it to the specified port, and listens for incoming connections.
- * It accepts client connections and processes messages from each client in a loop.
- * 
- * @param port The port number to listen on.
- */
-void Service::run_server(int port) {
-    LedManager ledManager;
-    int server_fd, new_socket;
-    struct sockaddr_in address;
-    int opt = 1;
-    socklen_t addrlen = sizeof(address);
-
-    // Create socket file descriptor
-    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
-        perror("socket failed");
-        exit(EXIT_FAILURE);
-    }
-
-    // Forcefully attach socket to the port, reusing it if necessary
-    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
-        perror("setsockopt");
-        exit(EXIT_FAILURE);
-    }
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(port);
-
-    // Bind the socket to the network address and port
-    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
-        perror("bind failed");
-        exit(EXIT_FAILURE);
-    }
-
-    // Start listening for incoming connections
-    if (listen(server_fd, 3) < 0) {
-        perror("listen");
-        exit(EXIT_FAILURE);
-    }
-
-    std::cout << "LedManager server listening on port " << port << std::endl;
-
-    // Main outer loop to accept new client connections
-    while (true) {
-        if ((new_socket = accept(server_fd, (struct sockaddr *)&address, &addrlen)) < 0) {
-            perror("accept");
-            continue; // On failure, wait for the next connection
-        }
-
-        std::cout << "New client connected." << std::endl;
-
-        std::string buffer;
-        char read_buffer[1024];
-
-        // Loop to receive all data from this client
-        while (true) {
-            ssize_t received = recv(new_socket, read_buffer, sizeof(read_buffer), 0);
-
-            if (received <= 0) {
-                std::cout << "Client disconnected." << std::endl;
-                close(new_socket);
-                break; // Exit recv loop, go back to accept()
-            }
-
-            // Append received data to our persistent buffer
-            buffer.append(read_buffer, received);
-
-            // Process all complete messages (lines) in the buffer
-            size_t pos;
-            while ((pos = buffer.find('\n')) != std::string::npos) {
-                std::string message = buffer.substr(0, pos);
-                buffer.erase(0, pos + 1); // Erase the message and the newline
-
-                if (!message.empty()) {
-                    ledManager.updateLedState(message);
-                }
-            }
-        }
-
-        // The client has disconnected, so close their socket.
-        std::cout << "Client disconnected. Closing socket." << std::endl;
-        close(new_socket);
-    }
 }
