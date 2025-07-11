@@ -13,15 +13,15 @@
 #include <gtest/gtest.h>
 
 // Test subclass to expose/provide hooks for testing
-class TestableService : public Service {
+class TestableService : public hello_ipc::Service {
     public:
         TestableService(const std::string& name, bool connect = false)
-            : Service(name, connect) {}
-        using Service::ConnectToServer;
-        using Service::SendResponse;
-        using Service::ReceiveMessage;
-        using Service::SendMessage;
-        using Service::RunServer;
+            : hello_ipc::Service(name, connect) {}
+        using hello_ipc::Service::ConnectToServer;
+        using hello_ipc::Service::SendResponse;
+        using hello_ipc::Service::ReceiveMessage;
+        using hello_ipc::Service::SendMessage;
+        using hello_ipc::Service::RunServer;
         int &sock() { return GetSocket(); }
 };
 
@@ -75,25 +75,25 @@ TEST(ServiceTest, RunServerReceivesMessage) {
 }
 
 TEST(ServiceTest, ParseKeyValueReturnsKeyAndValue) {
-    auto result = Service::ParseKeyValue("led1=on");
+    auto result = hello_ipc::Service::ParseKeyValue("led1=on");
     EXPECT_EQ(result.first, "led1");
     EXPECT_EQ(result.second, "on");
 }
 
 TEST(ServiceTest, ParseKeyValueHandlesNoEquals) {
-    auto result = Service::ParseKeyValue("led1");
+    auto result = hello_ipc::Service::ParseKeyValue("led1");
     EXPECT_EQ(result.first, "led1");
     EXPECT_EQ(result.second, "");
 }
 
 TEST(ServiceTest, ParseKeyValueHandlesEmptyString) {
-    auto result = Service::ParseKeyValue("");
+    auto result = hello_ipc::Service::ParseKeyValue("");
     EXPECT_EQ(result.first, "");
     EXPECT_EQ(result.second, "");
 }
 
 TEST(ServiceTest, ParseKeyValueHandlesMultipleEquals) {
-    auto result = Service::ParseKeyValue("foo=bar=baz");
+    auto result = hello_ipc::Service::ParseKeyValue("foo=bar=baz");
     EXPECT_EQ(result.first, "foo");
     EXPECT_EQ(result.second, "bar=baz");
 }

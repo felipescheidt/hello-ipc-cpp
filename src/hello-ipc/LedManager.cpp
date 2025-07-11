@@ -4,6 +4,8 @@
 #include <fstream>
 #include <iostream>
 
+namespace hello_ipc {
+
 /**
  * @brief Constructs a LedManager service.
  */
@@ -98,3 +100,5 @@ std::string LedManager::GetLedState(const std::string &led_num) const {
 
     return (state == "1") ? "on" : "off";
 }
+
+} // namespace hello_ipc

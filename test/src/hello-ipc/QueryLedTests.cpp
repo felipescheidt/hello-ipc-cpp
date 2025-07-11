@@ -6,13 +6,13 @@
 #include <gtest/gtest.h>
 
 // Test subclass to override send/receive for testing
-class TestableQueryLed : public QueryLed {
+class TestableQueryLed : public hello_ipc::QueryLed {
     public:
         TestableQueryLed(const std::string& socket_path)
-            : QueryLed(socket_path, false) {} // disables connection for tests
+            : hello_ipc::QueryLed(socket_path, false) {} // disables connection for tests
 
-        using QueryLed::queryState;
-        using QueryLed::HandleUserInput;
+        using hello_ipc::QueryLed::queryState;
+        using hello_ipc::QueryLed::HandleUserInput;
 
         std::vector<std::string> sentMessages;
         std::vector<std::string> responses;

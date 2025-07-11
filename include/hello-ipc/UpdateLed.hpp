@@ -5,6 +5,8 @@
 
 #include <iostream>
 
+namespace hello_ipc {
+
 /**
  * @file UpdateLed.hpp
  * @brief A client to update the state of LEDs via IPC.
@@ -30,5 +32,7 @@ class UpdateLed : public Service {
         int argc_;
         char** argv_;
 };
+
+} // namespace hello_ipc
 
 #endif // HELLO_IPC_UPDATE_LED_HPP_

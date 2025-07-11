@@ -6,6 +6,8 @@
 #include <string>
 #include <functional>
 
+namespace hello_ipc {
+
 /** 
  * @file Service.hpp
  * @brief Base class for IPC services using TCP/IP sockets.
@@ -52,5 +54,7 @@ class Service {
         int sockfd_;
         std::string receive_buffer_;
 };
+
+} // namespace hello_ipc
 
 #endif // HELLO_IPC_SERVICE_HPP_

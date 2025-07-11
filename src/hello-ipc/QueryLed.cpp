@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <cctype>
 
+namespace hello_ipc {
+
 /**
  * @brief Constructs a QueryLed client.
  * 
@@ -79,3 +81,5 @@ void QueryLed::queryState(const std::string &led_name) {
         std::cout << "Error receiving response: " << e.what() << std::endl;
     }
 }
+
+} // namespace hello_ipc

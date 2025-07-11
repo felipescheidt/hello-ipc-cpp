@@ -6,11 +6,11 @@
 #include <gtest/gtest.h>
 
 // Test subclass to access protected methods
-class TestableLedManager : public LedManager {
+class TestableLedManager : public hello_ipc::LedManager {
     public:
-        using LedManager::HandleMessage;
-        using LedManager::UpdateLedState;
-        using LedManager::GetLedState;
+        using hello_ipc::LedManager::HandleMessage;
+        using hello_ipc::LedManager::UpdateLedState;
+        using hello_ipc::LedManager::GetLedState;
 };
 
 class LedManagerTest : public ::testing::Test {

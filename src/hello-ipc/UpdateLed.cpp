@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cctype>
 
+namespace hello_ipc {
 
 /** 
  * @brief Constructs an UpdateLed client that connects to the LedManager service.
@@ -107,3 +108,5 @@ void UpdateLed::SendUpdate(const std::string &led_name, const std::string &led_s
     SendMessage(message);
     logger().Log("Sent update for LED " + led_name + " to state: " + led_state);
 }
+
+} // namespace hello_ipc

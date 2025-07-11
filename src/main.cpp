@@ -39,13 +39,13 @@ int main(int argc, char* argv[]) {
 
     try {
         if (mode == "--led-manager") {
-            LedManager server;
+            hello_ipc::LedManager server;
             server.Run(LED_MANAGER_SOCKET);
         } else if (mode == "--update-led") {
-            UpdateLed client(LED_MANAGER_SOCKET, argc, argv);
+            hello_ipc::UpdateLed client(LED_MANAGER_SOCKET, argc, argv);
             client.Run();
         } else if (mode == "--query-led") {
-            QueryLed client(LED_MANAGER_SOCKET);
+            hello_ipc::QueryLed client(LED_MANAGER_SOCKET);
             client.Run();
         } else {
             PrintUsage();

@@ -5,6 +5,8 @@
 #include <string>
 #include <fstream>
 
+namespace hello_ipc {
+
 /**
  * @file Logger.hpp
  * @brief Logger class for logging messages to file.
@@ -37,5 +39,7 @@ class Logger {
         std::string service_name_;
         mutable std::ofstream log_file_;
 };
+
+} // namespace hello_ipc
 
 #endif // HELLO_IPC_LOGGER_HPP_

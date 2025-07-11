@@ -2,6 +2,8 @@
 
 #include <stdexcept>
 
+namespace hello_ipc {
+
 /**
  * @brief Constructs a Logger for the given service name.
  *        The log file will be /tmp/<service_name>.log
@@ -42,3 +44,5 @@ Logger::~Logger() {
         log_file_.close();
     }
 }
+
+} // namespace hello_ipc

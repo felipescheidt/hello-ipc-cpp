@@ -5,6 +5,8 @@
 
 #include <iostream>
 
+namespace hello_ipc {
+
 /**
  * @file QueryLed.hpp
  * @brief Class to query LED states via IPC.
@@ -24,5 +26,7 @@ class QueryLed : public Service {
         void HandleUserInput(std::istream &input_stream);
         void queryState(const std::string &led_name);
 };
+
+} // namespace hello_ipc
 
 #endif // HELLO_IPC_QUERY_LED_HPP_

@@ -3,6 +3,8 @@
 
 #include "Service.hpp"
 
+namespace hello_ipc {
+
 /**
  * @file LedManager.hpp
  * @brief Class to manage LED states via IPC.
@@ -25,5 +27,7 @@ class LedManager : public Service {
         void UpdateLedState(const std::string& led_num, const std::string& led_state);
         std::string GetLedState(const std::string& led_num) const;
 };
+
+} // namespace hello_ipc
 
 #endif // HELLO_IPC_LED_MANAGER_HPP_

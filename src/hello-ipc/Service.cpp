@@ -10,6 +10,8 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
+namespace hello_ipc {
+
 /** 
  * @brief Constructs a Service with the given service name.
  *
@@ -180,3 +182,5 @@ std::pair<std::string, std::string> Service::ParseKeyValue(const std::string &ms
     }
     return {msg.substr(0, pos), msg.substr(pos + 1)};
 }
+
+} // namespace hello_ipc

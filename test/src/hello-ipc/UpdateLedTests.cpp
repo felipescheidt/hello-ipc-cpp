@@ -6,14 +6,14 @@
 #include "gtest/gtest.h"
 
 // Test subclass to expose protected/private methods for testing
-class TestableUpdateLed : public UpdateLed {
+class TestableUpdateLed : public hello_ipc::UpdateLed {
     public:
         TestableUpdateLed(const std::string &socket_path, int argc, char** argv)
-            : UpdateLed(socket_path, argc, argv, false) {}
+            : hello_ipc::UpdateLed(socket_path, argc, argv, false) {}
 
-        using UpdateLed::HandleArguments;
-        using UpdateLed::HandleUserInput;
-        using UpdateLed::SendUpdate;
+        using hello_ipc::UpdateLed::HandleArguments;
+        using hello_ipc::UpdateLed::HandleUserInput;
+        using hello_ipc::UpdateLed::SendUpdate;
 
         std::vector<std::string> sentMessages;
         void SendMessage(const std::string& message) const override {

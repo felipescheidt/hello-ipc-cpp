@@ -41,7 +41,7 @@ protected:
 
 TEST_F(LoggerTest, ConstructorCreatesLogFile) {
     {
-        Logger logger(service_name);
+        hello_ipc::Logger logger(service_name);
     }
     EXPECT_TRUE(std::filesystem::exists(logFilePath));
 }
@@ -51,7 +51,7 @@ TEST_F(LoggerTest, LogMethodWritesCorrectFormat) {
     const std::string expectedContent = "[" + service_name + "]: " + message + "\n";
 
     {
-        Logger logger(service_name);
+        hello_ipc::Logger logger(service_name);
         logger.Log(message);
     } // Logger is destroyed here, closing the file.
 
@@ -66,7 +66,7 @@ TEST_F(LoggerTest, LogMethodAppendsMessages) {
                                         "[" + service_name + "]: " + message2 + "\n";
 
     {
-        Logger logger(service_name);
+        hello_ipc::Logger logger(service_name);
         logger.Log(message1);
         logger.Log(message2);
     }
@@ -80,7 +80,7 @@ TEST_F(LoggerTest, HandlesEmptyLogMessage) {
     const std::string expectedContent = "[" + service_name + "]: " + message + "\n";
 
     {
-        Logger logger(service_name);
+        hello_ipc::Logger logger(service_name);
         logger.Log(message);
     }
 
@@ -93,7 +93,7 @@ TEST_F(LoggerTest, ConstructorThrowsOnInvalidPath) {
     const std::string invalidServiceName = "non_existent_dir/TestLogger";
 
     EXPECT_THROW({
-        Logger logger(invalidServiceName);
+        hello_ipc::Logger logger(invalidServiceName);
     }, std::runtime_error);
 
     // Verify that our test helper returns an empty string for a non-existent file.
