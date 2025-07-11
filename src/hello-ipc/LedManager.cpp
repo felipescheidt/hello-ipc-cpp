@@ -44,13 +44,13 @@ void LedManager::HandleMessage(int client_socket, const std::string &message) {
     auto [key, value] = Service::ParseKeyValue(message);
 
     if (key == "QUERY") {
-        logger_.log("Received query for LED: " + value);
+        logger().Log("Received query for LED: " + value);
         std::string state = GetLedState(value);
         std::string response = value + "=" + state + "\n";
         SendResponse(client_socket, response);
     } else {
         // Assume it's an update message (e.g., "1=on")
-        logger_.log("Received update for LED: " + key + " to state: " + value);
+        logger().Log("Received update for LED: " + key + " to state: " + value);
         UpdateLedState(key, value);
     }
 }
@@ -66,11 +66,11 @@ void LedManager::HandleMessage(int client_socket, const std::string &message) {
  */
 void LedManager::UpdateLedState(const std::string &led_num, const std::string &led_state) {
     if (led_num.empty() || led_state.empty()) {
-        logger_.log("Invalid update format.");
+        logger().Log("Invalid update format.");
         return;
     }
     if (led_state != "on" && led_state != "off") {
-        logger_.log("Invalid LED state: " + led_state);
+        logger().Log("Invalid LED state: " + led_state);
         return;
     }
     std::string ledDir = "/tmp/sys/class/led_" + led_num;
@@ -82,9 +82,9 @@ void LedManager::UpdateLedState(const std::string &led_num, const std::string &l
         std::ofstream ledFile(filePath);
         ledFile.exceptions(std::ofstream::failbit | std::ofstream::badbit);
         ledFile << (led_state == "on" ? "1" : "0") << '\n';
-        logger_.log("Updated LED " + led_num + " to state: " + led_state);
+        logger().Log("Updated LED " + led_num + " to state: " + led_state);
     } catch (const std::exception &e) {
-        logger_.log("Error writing to file " + filePath + ": " + e.what());
+        logger().Log("Error writing to file " + filePath + ": " + e.what());
     }
 }
 

@@ -10,7 +10,7 @@ class TestableQueryLed : public QueryLed {
             : QueryLed(socket_path, false) {} // disables connection for tests
 
         using QueryLed::queryState;
-        using QueryLed::handleUserInput;
+        using QueryLed::HandleUserInput;
 
         std::vector<std::string> sentMessages;
         std::vector<std::string> responses;
@@ -44,7 +44,7 @@ TEST(QueryLedTest, HandleUserInputQueriesAndExits) {
     client.responses = {"off"};
     std::istringstream input("2\nexit\n");
     testing::internal::CaptureStdout();
-    client.handleUserInput(input);
+    client.HandleUserInput(input);
     std::string output = testing::internal::GetCapturedStdout();
 
     ASSERT_EQ(client.sentMessages.size(), 1);
@@ -56,7 +56,7 @@ TEST(QueryLedTest, HandleUserInputRejectsInvalidInput) {
     TestableQueryLed client("/tmp/fake.sock");
     std::istringstream input("abc\n\nexit\n");
     testing::internal::CaptureStderr();
-    client.handleUserInput(input);
+    client.HandleUserInput(input);
     std::string err = testing::internal::GetCapturedStderr();
 
     EXPECT_TRUE(client.sentMessages.empty());

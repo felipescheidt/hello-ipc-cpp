@@ -15,15 +15,15 @@ class Logger {
     public:
         /**
          * @brief Constructs a Logger for the given service name.
-         * @param serviceName The name of the service (used for the log file name).
+         * @param service_name The name of the service (used for the log file name).
          */
-        explicit Logger(const std::string &serviceName);
+        explicit Logger(const std::string &service_name);
 
         /**
          * @brief Logs a message to the log file.
          * @param message The message to log.
          */
-        void log(const std::string &message) const;
+        void Log(const std::string &message) const;
 
         /**
          * @brief Destructor closes the log file.
@@ -31,10 +31,10 @@ class Logger {
         ~Logger();
 
     private:
-        void openLogFile(const std::string &serviceName);
-        std::string logFilePath_;
-        std::string serviceName_;
-        mutable std::ofstream logFile_;
+        void OpenLogFile(const std::string &service_name);
+        std::string log_file_path_;
+        std::string service_name_;
+        mutable std::ofstream log_file_;
 };
 
 #endif // HELLO_IPC_LOGGER_HPP_

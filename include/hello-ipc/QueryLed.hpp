@@ -20,8 +20,8 @@ class QueryLed : public Service {
         void Run();
 
     protected:
-        void handleUserInput(std::istream &inputStream);
-        void queryState(const std::string &ledName);
+        void HandleUserInput(std::istream &input_stream);
+        void queryState(const std::string &led_name);
 };
 
 #endif // HELLO_IPC_QUERY_LED_HPP_

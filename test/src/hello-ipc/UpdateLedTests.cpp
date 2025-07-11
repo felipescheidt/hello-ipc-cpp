@@ -9,9 +9,9 @@ class TestableUpdateLed : public UpdateLed {
         TestableUpdateLed(const std::string &socket_path, int argc, char** argv)
             : UpdateLed(socket_path, argc, argv, false) {}
 
-        using UpdateLed::handleArguments;
-        using UpdateLed::handleUserInput;
-        using UpdateLed::sendUpdate;
+        using UpdateLed::HandleArguments;
+        using UpdateLed::HandleUserInput;
+        using UpdateLed::SendUpdate;
 
         std::vector<std::string> sentMessages;
         void SendMessage(const std::string& message) const override {
@@ -22,7 +22,7 @@ class TestableUpdateLed : public UpdateLed {
 TEST(UpdateLedTest, HandleArgumentsSendsCorrectUpdates) {
     const char* argv[] = {"prog", "--update-led", "--led1", "--led2"};
     TestableUpdateLed updater("/tmp/fake.sock", 4, const_cast<char**>(argv));
-    updater.handleArguments();
+    updater.HandleArguments();
     ASSERT_EQ(updater.sentMessages.size(), 2);
     EXPECT_THAT(updater.sentMessages[0], testing::HasSubstr("1=on"));
     EXPECT_THAT(updater.sentMessages[1], testing::HasSubstr("2=on"));
@@ -32,7 +32,7 @@ TEST(UpdateLedTest, HandleUserInputSendsOnAndOff) {
     const char* argv[] = {"prog", "--update-led"};
     TestableUpdateLed updater("/tmp/fake.sock", 2, const_cast<char**>(argv));
     std::istringstream input("1\n!2\nexit\n");
-    updater.handleUserInput(input);
+    updater.HandleUserInput(input);
     ASSERT_EQ(updater.sentMessages.size(), 2);
     EXPECT_THAT(updater.sentMessages[0], testing::HasSubstr("1=on"));
     EXPECT_THAT(updater.sentMessages[1], testing::HasSubstr("2=off"));
@@ -42,14 +42,14 @@ TEST(UpdateLedTest, HandleUserInputIgnoresInvalidCommands) {
     const char* argv[] = {"prog", "--update-led"};
     TestableUpdateLed updater("/tmp/fake.sock", 2, const_cast<char**>(argv));
     std::istringstream input("abc\n!xyz\n\nexit\n");
-    updater.handleUserInput(input);
+    updater.HandleUserInput(input);
     EXPECT_TRUE(updater.sentMessages.empty());
 }
 
 TEST(UpdateLedTest, SendUpdateFormatsMessageCorrectly) {
     const char* argv[] = {"prog", "--update-led"};
     TestableUpdateLed updater("/tmp/fake.sock", 2, const_cast<char**>(argv));
-    updater.sendUpdate("3", "on");
+    updater.SendUpdate("3", "on");
     ASSERT_EQ(updater.sentMessages.size(), 1);
     EXPECT_EQ(updater.sentMessages[0], "3=on\n");
 }

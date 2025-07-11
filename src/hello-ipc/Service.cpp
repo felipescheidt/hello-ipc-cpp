@@ -21,10 +21,10 @@
  *
  * Initializes the logger and sets the socket file descriptor to -1 (not connected).
  *
- * @param serviceName The name of the service for logging purposes.
+ * @param service_name The name of the service for logging purposes.
  */
-Service::Service(const std::string &serviceName, bool connect)
-            : logger_(serviceName), sockfd_(-1) {
+Service::Service(const std::string &service_name, bool connect)
+            : logger_(service_name), sockfd_(-1) {
     (void)connect; // Suppress unused parameter warning
 }
 
@@ -55,7 +55,7 @@ void Service::ConnectToServer(const std::string &socket_path) {
     if (connect(sockfd_, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
         throw std::runtime_error("Connection failed to " + socket_path);
     }
-    logger_.log("Connection established to " + socket_path);
+    logger().Log("Connection established to " + socket_path);
 }
 
 /** 
@@ -87,14 +87,14 @@ void Service::RunServer(const std::string &socket_path,
         perror("listen"); exit(EXIT_FAILURE);
     }
 
-    logger_.log("Server listening on socket: " + socket_path);
+    logger().Log("Server listening on socket: " + socket_path);
 
     while (true) {
         int client_socket = accept(server_fd, NULL, NULL);
         if (client_socket < 0) {
             perror("accept"); continue;
         }
-        logger_.log("Accepted new connection.");
+        logger().Log("Accepted new connection.");
 
         // Spawn a new thread to handle the client
         // The message_handler is used to process incoming messages and send responses
@@ -115,7 +115,7 @@ void Service::RunServer(const std::string &socket_path,
                     }
                 }
             }
-            logger_.log("Client disconnected.");
+            logger().Log("Client disconnected.");
             close(client_socket);
         }).detach();
     }
@@ -145,7 +145,7 @@ void Service::SendMessage(const std::string &message) const {
  */
 void Service::SendResponse(int client_socket, const std::string &message) const {
     if (send(client_socket, message.c_str(), message.length(), 0) < 0) {
-        logger_.log("Failed to send response to client.");
+        logger().Log("Failed to send response to client.");
         throw std::runtime_error("Failed to send response");
     }
 }

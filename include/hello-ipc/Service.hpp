@@ -40,10 +40,15 @@ class Service {
         // For servers: sends a response back to a specific client.
         void SendResponse(int client_socket, const std::string& message) const;
 
-        Logger logger_;
-        int sockfd_;
+        const Logger &logger() const { return logger_; }
+
+        // Getter for sockfd_
+        int& GetSocket() { return sockfd_; }
+        const int& GetSocket() const { return sockfd_; }
 
     private:
+        Logger logger_;
+        int sockfd_;
         std::string receive_buffer_;
 };
 

@@ -13,8 +13,8 @@
 class LoggerTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        serviceName = "TestLoggerService";
-        logFilePath = "/tmp/" + serviceName + ".log";
+        service_name = "TestLoggerService";
+        logFilePath = "/tmp/" + service_name + ".log";
         std::filesystem::remove(logFilePath);
     }
 
@@ -33,24 +33,24 @@ protected:
         return content;
     }
 
-    std::string serviceName;
+    std::string service_name;
     std::string logFilePath;
 };
 
 TEST_F(LoggerTest, ConstructorCreatesLogFile) {
     {
-        Logger logger(serviceName);
+        Logger logger(service_name);
     }
     EXPECT_TRUE(std::filesystem::exists(logFilePath));
 }
 
 TEST_F(LoggerTest, LogMethodWritesCorrectFormat) {
     const std::string message = "This is a test message.";
-    const std::string expectedContent = "[" + serviceName + "]: " + message + "\n";
+    const std::string expectedContent = "[" + service_name + "]: " + message + "\n";
 
     {
-        Logger logger(serviceName);
-        logger.log(message);
+        Logger logger(service_name);
+        logger.Log(message);
     } // Logger is destroyed here, closing the file.
 
     const std::string actualContent = readFileContent(logFilePath);
@@ -60,13 +60,13 @@ TEST_F(LoggerTest, LogMethodWritesCorrectFormat) {
 TEST_F(LoggerTest, LogMethodAppendsMessages) {
     const std::string message1 = "First message.";
     const std::string message2 = "Second message.";
-    const std::string expectedContent = "[" + serviceName + "]: " + message1 + "\n" +
-                                        "[" + serviceName + "]: " + message2 + "\n";
+    const std::string expectedContent = "[" + service_name + "]: " + message1 + "\n" +
+                                        "[" + service_name + "]: " + message2 + "\n";
 
     {
-        Logger logger(serviceName);
-        logger.log(message1);
-        logger.log(message2);
+        Logger logger(service_name);
+        logger.Log(message1);
+        logger.Log(message2);
     }
 
     const std::string actualContent = readFileContent(logFilePath);
@@ -75,11 +75,11 @@ TEST_F(LoggerTest, LogMethodAppendsMessages) {
 
 TEST_F(LoggerTest, HandlesEmptyLogMessage) {
     const std::string message = "";
-    const std::string expectedContent = "[" + serviceName + "]: " + message + "\n";
+    const std::string expectedContent = "[" + service_name + "]: " + message + "\n";
 
     {
-        Logger logger(serviceName);
-        logger.log(message);
+        Logger logger(service_name);
+        logger.Log(message);
     }
 
     const std::string actualContent = readFileContent(logFilePath);

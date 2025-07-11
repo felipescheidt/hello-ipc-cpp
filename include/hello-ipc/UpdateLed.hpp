@@ -22,9 +22,9 @@ class UpdateLed : public Service {
         void Run();
 
     protected:
-        void handleArguments();
-        void handleUserInput(std::istream &inputStream);
-        void sendUpdate(const std::string &ledName, const std::string &led_state);
+        void HandleArguments();
+        void HandleUserInput(std::istream &input_stream);
+        void SendUpdate(const std::string &led_name, const std::string &led_state);
 
         int argc_;
         char** argv_;

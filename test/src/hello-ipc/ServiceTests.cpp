@@ -20,7 +20,7 @@ class TestableService : public Service {
         using Service::ReceiveMessage;
         using Service::SendMessage;
         using Service::RunServer;
-        int& sock() { return sockfd_; }
+        int &sock() { return GetSocket(); }
 };
 
 TEST(ServiceTest, RunServerReceivesMessage) {

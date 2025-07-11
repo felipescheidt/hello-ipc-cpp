@@ -37,9 +37,9 @@ UpdateLed::UpdateLed(const std::string &socket_path, int argc, char** argv, bool
  */
 void UpdateLed::Run() {
     if (argc_ > 2) { // The first arg is the program, second is the mode
-        handleArguments();
+        HandleArguments();
     }
-    handleUserInput(std::cin);
+    HandleUserInput(std::cin);
 }
 
 /** 
@@ -50,13 +50,13 @@ void UpdateLed::Run() {
  * 
  * @throws std::runtime_error if sending messages fails.
  */
-void UpdateLed::handleArguments() {
+void UpdateLed::HandleArguments() {
     for (int i = 2; i < argc_; ++i) {
         std::string arg = argv_[i];
         if (arg.rfind("--led", 0) == 0) {
-            std::string ledName = arg.substr(5);
-            if (!ledName.empty()) {
-                sendUpdate(ledName, "on");
+            std::string led_name = arg.substr(5);
+            if (!led_name.empty()) {
+                SendUpdate(led_name, "on");
             }
         }
     }
@@ -68,49 +68,49 @@ void UpdateLed::handleArguments() {
  * This method reads user input from the console, allowing users to specify
  * LED numbers and their states (on/off) interactively.
  *
- * @param inputStream The input stream to read from (e.g., std::cin).
+ * @param input_stream The input stream to read from (e.g., std::cin).
  */
-void UpdateLed::handleUserInput(std::istream &inputStream) {
+void UpdateLed::HandleUserInput(std::istream &input_stream) {
     std::cout << "Welcome to the UpdateLed client!" << std::endl;
     std::cout << "Enter command ('1' for on, '!1' for off), or 'exit' to quit." << std::endl;
     std::string input;
 
     while (true) {
-        if (&inputStream == &std::cin)
+        if (&input_stream == &std::cin)
             std::cout << "> ";
-        if (!std::getline(inputStream, input) || input == "exit")
+        if (!std::getline(input_stream, input) || input == "exit")
             break;
         if (input.empty())
             continue;
 
-        std::string ledName, led_state;
+        std::string led_name, led_state;
         if (input[0] == '!'){
             led_state = "off";
-            ledName = input.substr(1);
+            led_name = input.substr(1);
         }  else {
             led_state = "on";
-            ledName = input;
+            led_name = input;
         }
-        if (ledName.empty() || !std::all_of(ledName.begin(), ledName.end(), ::isdigit)) {
+        if (led_name.empty() || !std::all_of(led_name.begin(), led_name.end(), ::isdigit)) {
             std::cerr << "Invalid command." << std::endl;
             continue;
         }
-        sendUpdate(ledName, led_state);
+        SendUpdate(led_name, led_state);
     }
 }
 
 /**
  * @brief Sends an update command for a specific LED.
  *
- * This method constructs a message in the format "ledName=led_state\n"
+ * This method constructs a message in the format "led_name=led_state\n"
  * and sends it to the LedManager service.
  *
- * @param ledName The name of the LED to update.
+ * @param led_name The name of the LED to update.
  * @param led_state The new state of the LED ("on" or "off").
  * @throws std::runtime_error if sending the message fails.
  */
-void UpdateLed::sendUpdate(const std::string &ledName, const std::string &led_state) {
-    std::string message = ledName + "=" + led_state + "\n"; // ex: "1=on\n"
+void UpdateLed::SendUpdate(const std::string &led_name, const std::string &led_state) {
+    std::string message = led_name + "=" + led_state + "\n"; // ex: "1=on\n"
     SendMessage(message);
-    logger_.log("Sent update for LED " + ledName + " to state: " + led_state);
+    logger().Log("Sent update for LED " + led_name + " to state: " + led_state);
 }
