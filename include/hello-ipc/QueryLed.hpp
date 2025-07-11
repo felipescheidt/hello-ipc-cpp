@@ -11,13 +11,13 @@
  * This class connects to the LedManager service and allows users to send queries
  * to retrieve the current state of LEDs.
  * 
- * @param socketPath The path to the socket file for communication.
+ * @param socket_path The path to the socket file for communication.
  * @throws std::runtime_error if the socket connection fails or sending messages fails.
  */
 class QueryLed : public Service {
     public:
-        QueryLed(const std::string &socketPath, bool connect = true);
-        void run();
+        QueryLed(const std::string &socket_path, bool connect = true);
+        void Run();
 
     protected:
         void handleUserInput(std::istream &inputStream);

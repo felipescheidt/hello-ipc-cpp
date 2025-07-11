@@ -15,16 +15,16 @@ class TestableService : public Service {
     public:
         TestableService(const std::string& name, bool connect = false)
             : Service(name, connect) {}
-        using Service::connectToServer;
-        using Service::sendResponse;
-        using Service::receiveMessage;
-        using Service::sendMessage;
-        using Service::runServer;
-        int& sock() { return sockfd; }
+        using Service::ConnectToServer;
+        using Service::SendResponse;
+        using Service::ReceiveMessage;
+        using Service::SendMessage;
+        using Service::RunServer;
+        int& sock() { return sockfd_; }
 };
 
 TEST(ServiceTest, RunServerReceivesMessage) {
-    const std::string socketPath = "/tmp/test_service_runserver.sock";
+    const std::string socket_path = "/tmp/test_service_RunServer.sock";
     std::atomic<bool> messageReceived{false};
     std::string receivedMsg;
     int receivedClient = -1;
@@ -32,7 +32,7 @@ TEST(ServiceTest, RunServerReceivesMessage) {
     // Start server in a background thread
     std::thread serverThread([&] {
         TestableService svc("svc", false);
-        svc.runServer(socketPath, [&](int client, const std::string& msg) {
+        svc.RunServer(socket_path, [&](int client, const std::string& msg) {
             receivedMsg = msg;
             receivedClient = client;
             messageReceived = true;
@@ -50,7 +50,7 @@ TEST(ServiceTest, RunServerReceivesMessage) {
     struct sockaddr_un addr;
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path, socketPath.c_str(), sizeof(addr.sun_path) - 1);
+    strncpy(addr.sun_path, socket_path.c_str(), sizeof(addr.sun_path) - 1);
 
     ASSERT_EQ(connect(clientSock, (struct sockaddr*)&addr, sizeof(addr)), 0);
 
@@ -66,52 +66,52 @@ TEST(ServiceTest, RunServerReceivesMessage) {
 
     // Cleanup
     close(clientSock);
-    unlink(socketPath.c_str());
+    unlink(socket_path.c_str());
     // The server thread is still running; in a real test, you'd signal it to stop.
     // For this minimal test, just detach to let the process exit.
     serverThread.detach();
 }
 
 TEST(ServiceTest, ParseKeyValueReturnsKeyAndValue) {
-    auto result = Service::parseKeyValue("led1=on");
+    auto result = Service::ParseKeyValue("led1=on");
     EXPECT_EQ(result.first, "led1");
     EXPECT_EQ(result.second, "on");
 }
 
 TEST(ServiceTest, ParseKeyValueHandlesNoEquals) {
-    auto result = Service::parseKeyValue("led1");
+    auto result = Service::ParseKeyValue("led1");
     EXPECT_EQ(result.first, "led1");
     EXPECT_EQ(result.second, "");
 }
 
 TEST(ServiceTest, ParseKeyValueHandlesEmptyString) {
-    auto result = Service::parseKeyValue("");
+    auto result = Service::ParseKeyValue("");
     EXPECT_EQ(result.first, "");
     EXPECT_EQ(result.second, "");
 }
 
 TEST(ServiceTest, ParseKeyValueHandlesMultipleEquals) {
-    auto result = Service::parseKeyValue("foo=bar=baz");
+    auto result = Service::ParseKeyValue("foo=bar=baz");
     EXPECT_EQ(result.first, "foo");
     EXPECT_EQ(result.second, "bar=baz");
 }
 
 TEST(ServiceTest, ConnectToServerThrowsOnInvalidPath) {
     TestableService svc("svc", false);
-    EXPECT_THROW(svc.connectToServer("/tmp/this_socket_should_not_exist.sock"), std::runtime_error);
+    EXPECT_THROW(svc.ConnectToServer("/tmp/this_socket_should_not_exist.sock"), std::runtime_error);
 }
 
 TEST(ServiceTest, SendMessageThrowsIfSocketInvalid) {
     TestableService svc("svc", false);
     svc.sock() = -1; // force invalid socket
-    EXPECT_THROW(svc.sendMessage("hello"), std::runtime_error);
+    EXPECT_THROW(svc.SendMessage("hello"), std::runtime_error);
 }
 
 TEST(ServiceTest, ReceiveMessageThrowsIfSocketInvalid) {
     TestableService svc("svc", false);
     svc.sock() = -1; // force invalid socket
     EXPECT_THROW({
-        svc.receiveMessage();
+        svc.ReceiveMessage();
     }, std::runtime_error);
 }
 

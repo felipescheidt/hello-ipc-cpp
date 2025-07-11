@@ -6,15 +6,15 @@
 // Test subclass to expose protected/private methods for testing
 class TestableUpdateLed : public UpdateLed {
     public:
-        TestableUpdateLed(const std::string &socketPath, int argc, char** argv)
-            : UpdateLed(socketPath, argc, argv, false) {}
+        TestableUpdateLed(const std::string &socket_path, int argc, char** argv)
+            : UpdateLed(socket_path, argc, argv, false) {}
 
         using UpdateLed::handleArguments;
         using UpdateLed::handleUserInput;
         using UpdateLed::sendUpdate;
 
         std::vector<std::string> sentMessages;
-        void sendMessage(const std::string& message) const override {
+        void SendMessage(const std::string& message) const override {
             const_cast<TestableUpdateLed*>(this)->sentMessages.push_back(message);
         }
 };

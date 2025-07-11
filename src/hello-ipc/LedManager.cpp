@@ -21,13 +21,13 @@ LedManager::LedManager() : Service("LedManager", true) {}
 /** 
  * @brief Runs the LedManager server, listening for incoming connections.
  *
- * @param socketPath The path to the socket file for communication.
+ * @param socket_path The path to the socket file for communication.
  * @throws std::runtime_error if the socket connection fails or file operations fail.
  */
-void LedManager::run(const std::string &socketPath) {
+void LedManager::Run(const std::string &socket_path) {
     // Use the generic server runner from the base class
-    runServer(socketPath, [this](int client_socket, const std::string &msg) {
-        this->handleMessage(client_socket, msg);
+    RunServer(socket_path, [this](int client_socket, const std::string &msg) {
+        this->HandleMessage(client_socket, msg);
     });
 }
 
@@ -40,18 +40,18 @@ void LedManager::run(const std::string &socketPath) {
  * @param client_socket The socket file descriptor of the client.
  * @param message The received message from the client.
  */
-void LedManager::handleMessage(int client_socket, const std::string &message) {
-    auto [key, value] = Service::parseKeyValue(message);
+void LedManager::HandleMessage(int client_socket, const std::string &message) {
+    auto [key, value] = Service::ParseKeyValue(message);
 
     if (key == "QUERY") {
         logger_.log("Received query for LED: " + value);
-        std::string state = getLedState(value);
+        std::string state = GetLedState(value);
         std::string response = value + "=" + state + "\n";
-        sendResponse(client_socket, response);
+        SendResponse(client_socket, response);
     } else {
         // Assume it's an update message (e.g., "1=on")
         logger_.log("Received update for LED: " + key + " to state: " + value);
-        updateLedState(key, value);
+        UpdateLedState(key, value);
     }
 }
 
@@ -61,19 +61,19 @@ void LedManager::handleMessage(int client_socket, const std::string &message) {
  * This method creates the necessary directories and writes the state to a file
  * representing the LED's state.
  *
- * @param ledNum The number of the LED to update.
- * @param ledState The new state of the LED ("on" or "off").
+ * @param led_num The number of the LED to update.
+ * @param led_state The new state of the LED ("on" or "off").
  */
-void LedManager::updateLedState(const std::string &ledNum, const std::string &ledState) {
-    if (ledNum.empty() || ledState.empty()) {
+void LedManager::UpdateLedState(const std::string &led_num, const std::string &led_state) {
+    if (led_num.empty() || led_state.empty()) {
         logger_.log("Invalid update format.");
         return;
     }
-    if (ledState != "on" && ledState != "off") {
-        logger_.log("Invalid LED state: " + ledState);
+    if (led_state != "on" && led_state != "off") {
+        logger_.log("Invalid LED state: " + led_state);
         return;
     }
-    std::string ledDir = "/tmp/sys/class/led_" + ledNum;
+    std::string ledDir = "/tmp/sys/class/led_" + led_num;
     std::string filePath = ledDir + "/brightness";
     try {
         if (!std::filesystem::exists(ledDir)) {
@@ -81,8 +81,8 @@ void LedManager::updateLedState(const std::string &ledNum, const std::string &le
         }
         std::ofstream ledFile(filePath);
         ledFile.exceptions(std::ofstream::failbit | std::ofstream::badbit);
-        ledFile << (ledState == "on" ? "1" : "0") << '\n';
-        logger_.log("Updated LED " + ledNum + " to state: " + ledState);
+        ledFile << (led_state == "on" ? "1" : "0") << '\n';
+        logger_.log("Updated LED " + led_num + " to state: " + led_state);
     } catch (const std::exception &e) {
         logger_.log("Error writing to file " + filePath + ": " + e.what());
     }
@@ -93,18 +93,18 @@ void LedManager::updateLedState(const std::string &ledNum, const std::string &le
  *
  * This method reads the state from the file representing the LED's state.
  *
- * @param ledNum The number of the LED to query.
+ * @param led_num The number of the LED to query.
  * @return The state of the LED ("on" or "off"), or an error message if the LED is not found.
  */
-std::string LedManager::getLedState(const std::string &ledNum) const {
-    if (ledNum.empty()) {
+std::string LedManager::GetLedState(const std::string &led_num) const {
+    if (led_num.empty()) {
         return "error: LED number cannot be empty";
     }
-    if (!std::filesystem::exists("/tmp/sys/class/led_" + ledNum)) {
+    if (!std::filesystem::exists("/tmp/sys/class/led_" + led_num)) {
         return "error: LED not found";
     }
     // Read the state from the file
-    std::string filePath = "/tmp/sys/class/led_" + ledNum + "/brightness";
+    std::string filePath = "/tmp/sys/class/led_" + led_num + "/brightness";
     std::ifstream ledFile(filePath);
     if (!ledFile.is_open())
         return "error";

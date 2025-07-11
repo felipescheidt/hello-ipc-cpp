@@ -6,8 +6,8 @@
 // Test subclass to override send/receive for testing
 class TestableQueryLed : public QueryLed {
     public:
-        TestableQueryLed(const std::string& socketPath)
-            : QueryLed(socketPath, false) {} // disables connection for tests
+        TestableQueryLed(const std::string& socket_path)
+            : QueryLed(socket_path, false) {} // disables connection for tests
 
         using QueryLed::queryState;
         using QueryLed::handleUserInput;
@@ -16,11 +16,11 @@ class TestableQueryLed : public QueryLed {
         std::vector<std::string> responses;
         mutable int receiveCount = 0;
 
-        void sendMessage(const std::string& message) const override {
+        void SendMessage(const std::string& message) const override {
             const_cast<TestableQueryLed*>(this)->sentMessages.push_back(message);
         }
 
-        std::string receiveMessage() override {
+        std::string ReceiveMessage() override {
             if (receiveCount < (int)responses.size())
                 return responses[receiveCount++];
             return "mocked_response";
@@ -67,7 +67,7 @@ TEST(QueryLedTest, QueryStateHandlesReceiveException) {
     class ExceptionQueryLed : public TestableQueryLed {
     public:
         using TestableQueryLed::TestableQueryLed;
-        std::string receiveMessage() override {
+        std::string ReceiveMessage() override {
             throw std::runtime_error("fail");
         }
     };

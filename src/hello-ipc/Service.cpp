@@ -24,51 +24,50 @@
  * @param serviceName The name of the service for logging purposes.
  */
 Service::Service(const std::string &serviceName, bool connect)
-            : logger_(serviceName), sockfd(-1) {
+            : logger_(serviceName), sockfd_(-1) {
     (void)connect; // Suppress unused parameter warning
 }
-
 
 /** 
  * @brief Destructor closes the socket if it is open.
  */
 Service::~Service() {
-    if (sockfd >= 0) {
-        close(sockfd);
+    if (sockfd_ >= 0) {
+        close(sockfd_);
     }
 }
 
 /** 
  * @brief Connects to a server at the specified socket path.
  *
- * @param socketPath The path to the socket file.
+ * @param socket_path The path to the socket file.
  * @throws std::runtime_error if the connection fails.
  */
-void Service::connectToServer(const std::string &socketPath) {
-    sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (sockfd < 0) throw std::runtime_error("Failed to create socket");
+void Service::ConnectToServer(const std::string &socket_path) {
+    sockfd_ = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (sockfd_ < 0) throw std::runtime_error("Failed to create socket");
 
     struct sockaddr_un server_addr;
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sun_family = AF_UNIX;
-    strncpy(server_addr.sun_path, socketPath.c_str(), sizeof(server_addr.sun_path) - 1);
+    strncpy(server_addr.sun_path, socket_path.c_str(), sizeof(server_addr.sun_path) - 1);
 
-    if (connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
-        throw std::runtime_error("Connection failed to " + socketPath);
+    if (connect(sockfd_, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
+        throw std::runtime_error("Connection failed to " + socket_path);
     }
-    logger_.log("Connection established to " + socketPath);
+    logger_.log("Connection established to " + socket_path);
 }
 
 /** 
  * @brief Runs a multi-threaded server loop that listens for incoming connections.
  *
- * @param socketPath The path to the socket file.
- * @param messageHandler A function to handle incoming messages from clients.
+ * @param socket_path The path to the socket file.
+ * @param message_handler A function to handle incoming messages from clients.
  */
-void Service::runServer(const std::string &socketPath,
-                        const std::function<void(int, const std::string&)> &messageHandler) {
+void Service::RunServer(const std::string &socket_path,
+                        const std::function<void(int, const std::string&)> &message_handler) {
     // Ensure the socket file does not already exist
-    unlink(socketPath.c_str());
+    unlink(socket_path.c_str());
 
     int server_fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (server_fd < 0) {
@@ -78,7 +77,7 @@ void Service::runServer(const std::string &socketPath,
     struct sockaddr_un address;
     memset(&address, 0, sizeof(address));
     address.sun_family = AF_UNIX;
-    strncpy(address.sun_path, socketPath.c_str(), sizeof(address.sun_path) - 1);
+    strncpy(address.sun_path, socket_path.c_str(), sizeof(address.sun_path) - 1);
 
     if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
         perror("bind failed"); exit(EXIT_FAILURE);
@@ -88,7 +87,7 @@ void Service::runServer(const std::string &socketPath,
         perror("listen"); exit(EXIT_FAILURE);
     }
 
-    logger_.log("Server listening on socket: " + socketPath);
+    logger_.log("Server listening on socket: " + socket_path);
 
     while (true) {
         int client_socket = accept(server_fd, NULL, NULL);
@@ -98,8 +97,8 @@ void Service::runServer(const std::string &socketPath,
         logger_.log("Accepted new connection.");
 
         // Spawn a new thread to handle the client
-        // The messageHandler is used to process incoming messages and send responses
-        std::thread([this, client_socket, messageHandler]() {
+        // The message_handler is used to process incoming messages and send responses
+        std::thread([this, client_socket, message_handler]() {
             std::string buffer;
             char read_buffer[1024];
             while (true) {
@@ -112,7 +111,7 @@ void Service::runServer(const std::string &socketPath,
                     std::string message = buffer.substr(0, pos);
                     buffer.erase(0, pos + 1);
                     if (!message.empty()) {
-                        messageHandler(client_socket, message);
+                        message_handler(client_socket, message);
                     }
                 }
             }
@@ -128,11 +127,11 @@ void Service::runServer(const std::string &socketPath,
  * @param message The message to send.
  * @throws std::runtime_error if the socket is not connected or sending fails.
  */
-void Service::sendMessage(const std::string &message) const {
-    if (sockfd < 0) {
+void Service::SendMessage(const std::string &message) const {
+    if (sockfd_ < 0) {
         throw std::runtime_error("Not connected");
     }
-    if (send(sockfd, message.c_str(), message.length(), 0) < 0) {
+    if (send(sockfd_, message.c_str(), message.length(), 0) < 0) {
         throw std::runtime_error("Failed to send message");
     }
 }
@@ -144,7 +143,7 @@ void Service::sendMessage(const std::string &message) const {
  * @param message The message to send as a response.
  * @throws std::runtime_error if sending fails.
  */
-void Service::sendResponse(int client_socket, const std::string &message) const {
+void Service::SendResponse(int client_socket, const std::string &message) const {
     if (send(client_socket, message.c_str(), message.length(), 0) < 0) {
         logger_.log("Failed to send response to client.");
         throw std::runtime_error("Failed to send response");
@@ -157,11 +156,11 @@ void Service::sendResponse(int client_socket, const std::string &message) const 
  * @return The received message.
  * @throws std::runtime_error if the connection is closed or receiving fails.
  */
-std::string Service::receiveMessage() {
+std::string Service::ReceiveMessage() {
     char read_buffer[1024] = {0};
 
     while (receive_buffer_.find('\n') == std::string::npos) {
-        ssize_t bytes_received = recv(sockfd, read_buffer, sizeof(read_buffer) - 1, 0);
+        ssize_t bytes_received = recv(sockfd_, read_buffer, sizeof(read_buffer) - 1, 0);
         if (bytes_received <= 0) {
             throw std::runtime_error("Connection closed by server.");
         }
@@ -180,7 +179,7 @@ std::string Service::receiveMessage() {
  * @param msg The message to parse.
  * @return A pair containing the key and value.
  */
-std::pair<std::string, std::string> Service::parseKeyValue(const std::string &msg) {
+std::pair<std::string, std::string> Service::ParseKeyValue(const std::string &msg) {
     size_t pos = msg.find('=');
     if (pos == std::string::npos) {
         return {msg, ""};

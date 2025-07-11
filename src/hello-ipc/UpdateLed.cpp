@@ -15,15 +15,15 @@
 /** 
  * @brief Constructs an UpdateLed client that connects to the LedManager service.
  *
- * @param socketPath The path to the socket file for communication.
+ * @param socket_path The path to the socket file for communication.
  * @param argc The argument count from the command line.
  * @param argv The argument vector from the command line.
  * @throws std::runtime_error if the socket connection fails.
  */
-UpdateLed::UpdateLed(const std::string &socketPath, int argc, char** argv, bool connect)
+UpdateLed::UpdateLed(const std::string &socket_path, int argc, char** argv, bool connect)
     : Service("UpdateLed"), argc_(argc), argv_(argv) {
     if (connect) {
-        connectToServer(socketPath);
+        ConnectToServer(socket_path);
     }
 }
 
@@ -35,7 +35,7 @@ UpdateLed::UpdateLed(const std::string &socketPath, int argc, char** argv, bool 
  * 
  * @throws std::runtime_error if sending messages fails.
  */
-void UpdateLed::run() {
+void UpdateLed::Run() {
     if (argc_ > 2) { // The first arg is the program, second is the mode
         handleArguments();
     }
@@ -83,34 +83,34 @@ void UpdateLed::handleUserInput(std::istream &inputStream) {
         if (input.empty())
             continue;
 
-        std::string ledName, ledState;
+        std::string ledName, led_state;
         if (input[0] == '!'){
-            ledState = "off";
+            led_state = "off";
             ledName = input.substr(1);
         }  else {
-            ledState = "on";
+            led_state = "on";
             ledName = input;
         }
         if (ledName.empty() || !std::all_of(ledName.begin(), ledName.end(), ::isdigit)) {
             std::cerr << "Invalid command." << std::endl;
             continue;
         }
-        sendUpdate(ledName, ledState);
+        sendUpdate(ledName, led_state);
     }
 }
 
 /**
  * @brief Sends an update command for a specific LED.
  *
- * This method constructs a message in the format "ledName=ledState\n"
+ * This method constructs a message in the format "ledName=led_state\n"
  * and sends it to the LedManager service.
  *
  * @param ledName The name of the LED to update.
- * @param ledState The new state of the LED ("on" or "off").
+ * @param led_state The new state of the LED ("on" or "off").
  * @throws std::runtime_error if sending the message fails.
  */
-void UpdateLed::sendUpdate(const std::string &ledName, const std::string &ledState) {
-    std::string message = ledName + "=" + ledState + "\n"; // ex: "1=on\n"
-    sendMessage(message);
-    logger_.log("Sent update for LED " + ledName + " to state: " + ledState);
+void UpdateLed::sendUpdate(const std::string &ledName, const std::string &led_state) {
+    std::string message = ledName + "=" + led_state + "\n"; // ex: "1=on\n"
+    SendMessage(message);
+    logger_.log("Sent update for LED " + ledName + " to state: " + led_state);
 }

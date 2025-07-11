@@ -13,14 +13,14 @@
 /** 
  * @brief Constructs a QueryLed client that connects to the LedManager service.
  *
- * @param socketPath The path to the socket file for communication.
+ * @param socket_path The path to the socket file for communication.
  * @param connect Whether to connect to the server immediately.
  * @throws std::runtime_error if the socket connection fails.
  */
-QueryLed::QueryLed(const std::string &socketPath, bool connect)
+QueryLed::QueryLed(const std::string &socket_path, bool connect)
         : Service("QueryLed", connect) {
     if (connect) {
-        connectToServer(socketPath);
+        ConnectToServer(socket_path);
     }
 }
 
@@ -31,7 +31,7 @@ QueryLed::QueryLed(const std::string &socketPath, bool connect)
  * 
  * @throws std::runtime_error if sending messages fails.
  */
-void QueryLed::run() {
+void QueryLed::Run() {
     handleUserInput(std::cin);
 }
 
@@ -76,11 +76,11 @@ void QueryLed::handleUserInput(std::istream &inputStream) {
  */
 void QueryLed::queryState(const std::string &ledName) {
     std::string message = "QUERY=" + ledName + "\n";
-    sendMessage(message);
+    SendMessage(message);
     logger_.log("Sent query for LED " + ledName);
 
     try {
-        std::string response = receiveMessage();
+        std::string response = ReceiveMessage();
         logger_.log("Received response: " + response);
         std::cout << "Response: " << response << std::endl;
     } catch (const std::runtime_error &e) {

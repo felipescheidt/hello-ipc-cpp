@@ -11,7 +11,7 @@
  */
 const std::string LED_MANAGER_SOCKET = "/tmp/led_manager.sock";
 
-void print_usage() {
+void PrintUsage() {
     std::cerr << "Usage: hello_ipc <mode> [options]\n"
               << "Modes:\n"
               << "  --led-manager    Run the LedManager server.\n"
@@ -31,7 +31,7 @@ void print_usage() {
  */
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        print_usage();
+        PrintUsage();
         return 1;
     }
 
@@ -40,15 +40,15 @@ int main(int argc, char* argv[]) {
     try {
         if (mode == "--led-manager") {
             LedManager server;
-            server.run(LED_MANAGER_SOCKET);
+            server.Run(LED_MANAGER_SOCKET);
         } else if (mode == "--update-led") {
             UpdateLed client(LED_MANAGER_SOCKET, argc, argv);
-            client.run();
+            client.Run();
         } else if (mode == "--query-led") {
             QueryLed client(LED_MANAGER_SOCKET);
-            client.run();
+            client.Run();
         } else {
-            print_usage();
+            PrintUsage();
             return 1;
         }
     } catch (const std::runtime_error &e) {

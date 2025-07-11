@@ -6,9 +6,9 @@
 // Test subclass to access protected methods
 class TestableLedManager : public LedManager {
     public:
-        using LedManager::handleMessage;
-        using LedManager::updateLedState;
-        using LedManager::getLedState;
+        using LedManager::HandleMessage;
+        using LedManager::UpdateLedState;
+        using LedManager::GetLedState;
 };
 
 class LedManagerTest : public ::testing::Test {
@@ -36,19 +36,19 @@ protected:
 };
 
 TEST_F(LedManagerTest, UpdateLedStateCreatesDirectoryAndFile) {
-    manager.updateLedState(ledName, "on");
+    manager.UpdateLedState(ledName, "on");
     EXPECT_TRUE(std::filesystem::exists(ledDir));
     EXPECT_TRUE(std::filesystem::exists(filePath));
 }
 
 TEST_F(LedManagerTest, UpdateLedStateSetsCorrectState) {
-    manager.updateLedState(ledName, "on");
+    manager.UpdateLedState(ledName, "on");
     std::ifstream file_on(filePath);
     std::string content_on;
     std::getline(file_on, content_on);
     EXPECT_EQ(content_on, "1");
 
-    manager.updateLedState(ledName, "off");
+    manager.UpdateLedState(ledName, "off");
     std::ifstream file_off(filePath);
     std::string content_off;
     std::getline(file_off, content_off);
@@ -56,7 +56,7 @@ TEST_F(LedManagerTest, UpdateLedStateSetsCorrectState) {
 }
 
 TEST_F(LedManagerTest, UpdateLedStateRejectsInvalidState) {
-    manager.updateLedState(ledName, "blinking");
+    manager.UpdateLedState(ledName, "blinking");
     EXPECT_FALSE(std::filesystem::exists(filePath));
 }
 
@@ -65,21 +65,21 @@ TEST_F(LedManagerTest, GetLedStateReturnsCorrectState) {
     std::ofstream file(filePath);
     file << "1";
     file.close();
-    EXPECT_EQ(manager.getLedState(ledName), "on");
+    EXPECT_EQ(manager.GetLedState(ledName), "on");
 
     std::ofstream file2(filePath);
     file2 << "0";
     file2.close();
-    EXPECT_EQ(manager.getLedState(ledName), "off");
+    EXPECT_EQ(manager.GetLedState(ledName), "off");
 }
 
 TEST_F(LedManagerTest, GetLedStateReturnsErrorWhenNotFound) {
-    EXPECT_EQ(manager.getLedState(ledName), "error: LED not found");
-    EXPECT_EQ(manager.getLedState(""), "error: LED number cannot be empty");
+    EXPECT_EQ(manager.GetLedState(ledName), "error: LED not found");
+    EXPECT_EQ(manager.GetLedState(""), "error: LED number cannot be empty");
 }
 
 TEST_F(LedManagerTest, HandleMessageUpdateCreatesFile) {
-    manager.handleMessage(-1, ledName + "=on");
+    manager.HandleMessage(-1, ledName + "=on");
     EXPECT_TRUE(std::filesystem::exists(filePath));
     std::ifstream file(filePath);
     std::string content;
@@ -88,16 +88,16 @@ TEST_F(LedManagerTest, HandleMessageUpdateCreatesFile) {
 }
 
 TEST_F(LedManagerTest, HandleMessageQueryThrowsOnInvalidSocket) {
-    manager.updateLedState(ledName, "on");
+    manager.UpdateLedState(ledName, "on");
     // Now expect an exception, since sending on socket -1 throws
-    EXPECT_THROW(manager.handleMessage(-1, "QUERY=" + ledName), std::runtime_error);
+    EXPECT_THROW(manager.HandleMessage(-1, "QUERY=" + ledName), std::runtime_error);
 }
 
 TEST_F(LedManagerTest, HandleMessageIgnoresInvalidFormats) {
-    manager.handleMessage(-1, "=");
-    manager.handleMessage(-1, ledName + "=");
-    manager.handleMessage(-1, "=on");
-    manager.handleMessage(-1, ledName + "=blinking");
+    manager.HandleMessage(-1, "=");
+    manager.HandleMessage(-1, ledName + "=");
+    manager.HandleMessage(-1, "=on");
+    manager.HandleMessage(-1, ledName + "=blinking");
     EXPECT_FALSE(std::filesystem::exists(filePath));
 }
 
