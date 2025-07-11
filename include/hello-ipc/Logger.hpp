@@ -1,5 +1,6 @@
 #ifndef HELLO_IPC_LOGGER_HPP_
 #define HELLO_IPC_LOGGER_HPP_
+
 #include <iostream>
 #include <string>
 #include <fstream>

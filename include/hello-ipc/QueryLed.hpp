@@ -2,6 +2,7 @@
 #define HELLO_IPC_QUERY_LED_HPP_
 
 #include "Service.hpp"
+
 #include <iostream>
 
 /**

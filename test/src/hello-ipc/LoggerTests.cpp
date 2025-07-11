@@ -1,8 +1,10 @@
-#include "gtest/gtest.h"
 #include "hello-ipc/Logger.hpp"
+
 #include <filesystem>
 #include <fstream>
 #include <string>
+
+#include "gtest/gtest.h"
 
 /** @file LoggerTests.cpp
  * @brief Unit tests for the Logger class.

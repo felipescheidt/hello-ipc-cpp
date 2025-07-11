@@ -1,9 +1,10 @@
 #ifndef HELLO_IPC_SERVICE_HPP_
 #define HELLO_IPC_SERVICE_HPP_
 
+#include "Logger.hpp"
+
 #include <string>
 #include <functional>
-#include "Logger.hpp"
 
 /** 
  * @file Service.hpp

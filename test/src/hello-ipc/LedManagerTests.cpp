@@ -1,7 +1,9 @@
-#include <gtest/gtest.h>
+#include "LedManager.hpp"
+
 #include <filesystem>
 #include <fstream>
-#include "LedManager.hpp"
+
+#include <gtest/gtest.h>
 
 // Test subclass to access protected methods
 class TestableLedManager : public LedManager {

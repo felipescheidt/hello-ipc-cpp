@@ -1,20 +1,14 @@
-/** 
- * @file Service.cpp
- * @brief Implementation of the Service class for IPC using TCP/IP sockets.
- *
- * This file contains the implementation of methods for sending and receiving messages,
- * connecting to a server, and running a multi-threaded server loop.
- */
-
 #include "Service.hpp"
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <unistd.h>
+
 #include <stdexcept>
 #include <cstring>
 #include <iostream>
 #include <thread>
 #include <vector>
+
+#include <unistd.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 
 /** 
  * @brief Constructs a Service with the given service name.

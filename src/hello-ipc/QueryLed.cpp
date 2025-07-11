@@ -1,21 +1,17 @@
-/**
- * @file QueryLed.cpp
- * @brief Implementation of the QueryLed client for querying LED states via IPC.
- * This file contains methods for handling user input and sending queries to the LedManager service.
- */
-
-
 #include "QueryLed.hpp"
+
 #include <string>
 #include <algorithm>
 #include <cctype>
 
-/** 
- * @brief Constructs a QueryLed client that connects to the LedManager service.
+/**
+ * @brief Constructs a QueryLed client.
+ * 
+ * Initializes the client and optionally connects to the LedManager service.
  *
- * @param socket_path The path to the socket file for communication.
+ * @param socket_path Path to the socket file for communication.
  * @param connect Whether to connect to the server immediately.
- * @throws std::runtime_error if the socket connection fails.
+ * @throws std::runtime_error If the socket connection fails.
  */
 QueryLed::QueryLed(const std::string &socket_path, bool connect)
         : Service("QueryLed", connect) {
@@ -24,24 +20,21 @@ QueryLed::QueryLed(const std::string &socket_path, bool connect)
     }
 }
 
-/** 
- * @brief Runs the QueryLed client, handling user input to query LED states.
- *
- * This method enters a loop to read user input and send queries to the LedManager service.
+/**
+ * @brief Runs the QueryLed client.
  * 
- * @throws std::runtime_error if sending messages fails.
+ * Handles user input to query LED states interactively.
  */
 void QueryLed::Run() {
     HandleUserInput(std::cin);
 }
 
-/** 
+/**
  * @brief Handles user input for querying LED states.
+ * 
+ * Reads user input from the console and sends queries to the LedManager service.
  *
- * This method reads user input from the console, allowing users to specify
- * LED numbers to query interactively.
- *
- * @param input_stream The input stream to read from (e.g., std::cin).
+ * @param input_stream Input stream to read from (e.g., std::cin).
  */
 void QueryLed::HandleUserInput(std::istream &input_stream) {
     std::cout << "Welcome to the QueryLed client!" << std::endl;
@@ -65,14 +58,13 @@ void QueryLed::HandleUserInput(std::istream &input_stream) {
     }
 }
 
-/** 
- * @brief Queries the state of a specific LED by sending a message to the LedManager service.
+/**
+ * @brief Queries the state of a specific LED.
+ * 
+ * Sends a query message to the LedManager service and waits for a response.
  *
- * This method constructs a query message in the format "QUERY=led_name\n"
- * and sends it to the LedManager service, then waits for a response.
- *
- * @param led_name The name of the LED to query.
- * @throws std::runtime_error if sending the message or receiving the response fails.
+ * @param led_name Name of the LED to query.
+ * @throws std::runtime_error If sending or receiving the message fails.
  */
 void QueryLed::queryState(const std::string &led_name) {
     std::string message = "QUERY=" + led_name + "\n";

@@ -1,12 +1,5 @@
-/**
- * @file UpdateLed.cpp
- * @brief Implementation of the UpdateLed client for updating LED states via IPC.
- *
- * This file contains the implementation of methods for handling user input,
- * sending LED update commands, and processing command-line arguments.
- */
-
 #include "UpdateLed.hpp"
+
 #include <string>
 #include <algorithm>
 #include <cctype>

@@ -1,14 +1,16 @@
-#include <gtest/gtest.h>
 #include "Service.hpp"
-#include <stdexcept>
-#include <string>
-#include <cstring>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <unistd.h>
-#include <thread>
+
 #include <atomic>
 #include <chrono>
+#include <cstring>
+#include <stdexcept>
+#include <string>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <thread>
+#include <unistd.h>
+
+#include <gtest/gtest.h>
 
 // Test subclass to expose/provide hooks for testing
 class TestableService : public Service {

@@ -1,7 +1,9 @@
-#include "gtest/gtest.h"
 #include "QueryLed.hpp"
+
 #include <sstream>
 #include <vector>
+
+#include <gtest/gtest.h>
 
 // Test subclass to override send/receive for testing
 class TestableQueryLed : public QueryLed {

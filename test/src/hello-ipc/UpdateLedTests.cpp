@@ -1,7 +1,9 @@
+#include "hello-ipc/UpdateLed.hpp"
+
+#include <sstream>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "hello-ipc/UpdateLed.hpp"
-#include <sstream>
 
 // Test subclass to expose protected/private methods for testing
 class TestableUpdateLed : public UpdateLed {
