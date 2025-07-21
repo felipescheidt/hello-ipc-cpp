@@ -81,7 +81,12 @@ TEST_F(LedManagerTest, GetLedStateReturnsErrorWhenNotFound) {
 }
 
 TEST_F(LedManagerTest, HandleMessageUpdateCreatesFile) {
-    manager.HandleMessage(-1, led_name + "=on");
+    // We expect an exception because the socket is invalid, but the state should still be updated.
+    try {
+        manager.HandleMessage(-1, led_name + "=on");
+    } catch (const std::runtime_error&) {
+        // Expected
+    }
     EXPECT_TRUE(std::filesystem::exists(filePath));
     std::ifstream file(filePath);
     std::string content;
@@ -96,10 +101,15 @@ TEST_F(LedManagerTest, HandleMessageQueryThrowsOnInvalidSocket) {
 }
 
 TEST_F(LedManagerTest, HandleMessageIgnoresInvalidFormats) {
-    manager.HandleMessage(-1, "=");
-    manager.HandleMessage(-1, led_name + "=");
-    manager.HandleMessage(-1, "=on");
-    manager.HandleMessage(-1, led_name + "=blinking");
+    // We expect exceptions because the socket is invalid, but the state should not be updated.
+    try {
+        manager.HandleMessage(-1, "=");
+        manager.HandleMessage(-1, led_name + "=");
+        manager.HandleMessage(-1, "=on");
+        manager.HandleMessage(-1, led_name + "=blinking");
+    } catch (const std::runtime_error&) {
+        // Expected
+    }
     EXPECT_FALSE(std::filesystem::exists(filePath));
 }
 
