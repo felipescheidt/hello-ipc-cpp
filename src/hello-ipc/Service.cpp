@@ -51,6 +51,7 @@ void Service::ConnectToServer(const std::string &socket_path) {
     if (connect(sockfd_, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
         throw std::runtime_error("Connection failed to " + socket_path);
     }
+
     logger().Log("Connection established to " + socket_path);
 }
 
@@ -62,35 +63,19 @@ void Service::ConnectToServer(const std::string &socket_path) {
  */
 void Service::RunServer(const std::string &socket_path,
                         const std::function<void(int, const std::string&)> &message_handler) {
-    // Ensure the socket file does not already exist
-    unlink(socket_path.c_str());
 
-    int server_fd = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (server_fd < 0) {
-        perror("socket failed"); exit(EXIT_FAILURE);
-    }
-
-    struct sockaddr_un address;
-    memset(&address, 0, sizeof(address));
-    address.sun_family = AF_UNIX;
-    strncpy(address.sun_path, socket_path.c_str(), sizeof(address.sun_path) - 1);
-
-    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
-        perror("bind failed"); exit(EXIT_FAILURE);
-    }
-
-    if (listen(server_fd, 10) < 0) {
-        perror("listen"); exit(EXIT_FAILURE);
-    }
-
+    int server_fd = CreateServerSocket(socket_path);
     logger().Log("Server listening on socket: " + socket_path);
 
     while (true) {
         int client_socket = accept(server_fd, NULL, NULL);
         if (client_socket < 0) {
-            perror("accept"); continue;
+            perror("accept");
+            continue;
         }
+
         logger().Log("Accepted new connection.");
+        std::cout << "New client connected. ID: " << client_socket << std::endl;
 
         // Spawn a new thread to handle the client
         std::thread([this, client_socket, handler = std::move(message_handler)]() {
@@ -111,6 +96,7 @@ void Service::RunServer(const std::string &socket_path,
                 }
             }
             logger().Log("Client disconnected.");
+            std::cout << "Client disconnected. ID: " << client_socket << std::endl;
             close(client_socket);
         }).detach();
     }
@@ -152,11 +138,20 @@ void Service::SendResponse(int client_socket, const std::string &message) const 
  * @throws std::runtime_error if the connection is closed or receiving fails.
  */
 std::string Service::ReceiveMessage() {
+    if (sockfd_ < 0) {
+        throw std::runtime_error("Socket is not connected.");
+    }
+
+    // Set socket timeout
+    SetupSocketTimeout(sockfd_);
+
     char read_buffer[1024] = {0};
 
     while (receive_buffer_.find('\n') == std::string::npos) {
         ssize_t bytes_received = recv(sockfd_, read_buffer, sizeof(read_buffer) - 1, 0);
-        if (bytes_received <= 0) {
+        if (bytes_received < 0) {
+            throw std::runtime_error("Error receiving data from server.");
+        } else if (bytes_received == 0) {
             throw std::runtime_error("Connection closed by server.");
         }
         receive_buffer_.append(read_buffer, bytes_received);
@@ -165,6 +160,7 @@ std::string Service::ReceiveMessage() {
     size_t pos = receive_buffer_.find('\n');
     std::string message = receive_buffer_.substr(0, pos);
     receive_buffer_.erase(0, pos + 1);
+
     return message;
 }
 
@@ -179,7 +175,66 @@ std::pair<std::string, std::string> Service::ParseKeyValue(const std::string &ms
     if (pos == std::string::npos) {
         return {msg, ""};
     }
+
     return {msg.substr(0, pos), msg.substr(pos + 1)};
+}
+
+/** 
+ * @brief Sets up the socket with necessary options.
+ *
+ * Configures the socket to have a timeout for receiving and sending data.
+ *
+ * @param sockfd The socket file descriptor to configure.
+ * @throws std::runtime_error if setting socket options fails.
+ */
+void Service::SetupSocketTimeout(int sockfd) const {
+    struct timeval timeout;
+    timeout.tv_sec = 5;
+    timeout.tv_usec = 0;
+
+    // Set the socket receive timeout
+    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
+        throw std::runtime_error("Failed to set socket receive timeout");
+    }
+
+    // Set the socket send timeout
+    if (setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0) {
+        throw std::runtime_error("Failed to set socket send timeout");
+    }
+}
+
+/** 
+ * @brief Creates a server socket and binds it to the specified path.
+ *
+ * @param socket_path The path to bind the server socket.
+ * @return The file descriptor of the created server socket.
+ * @throws std::runtime_error if socket creation, binding, or listening fails.
+ */
+int Service::CreateServerSocket(const std::string &socket_path) const {
+    // Ensure the socket file does not already exist
+    unlink(socket_path.c_str());
+
+    int server_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (server_fd < 0) {
+        throw std::runtime_error("Failed to create server socket");
+    }
+
+    struct sockaddr_un address;
+    memset(&address, 0, sizeof(address));
+    address.sun_family = AF_UNIX;
+    strncpy(address.sun_path, socket_path.c_str(), sizeof(address.sun_path) - 1);
+
+    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
+        close(server_fd);
+        throw std::runtime_error("Failed to bind server socket to " + socket_path);
+    }
+
+    if (listen(server_fd, 10) < 0) {
+        close(server_fd);
+        throw std::runtime_error("Failed to listen on server socket");
+    }
+
+    return server_fd;
 }
 
 } // namespace hello_ipc

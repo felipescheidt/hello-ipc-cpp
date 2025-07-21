@@ -50,6 +50,8 @@ class Service {
         const int& GetSocket() const { return sockfd_; }
 
     private:
+        int CreateServerSocket(const std::string &socket_path) const;
+        void SetupSocketTimeout(int sockfd) const;
         Logger logger_;
         int sockfd_;
         std::string receive_buffer_;
