@@ -32,15 +32,19 @@ void LedManager::Run(const std::string &socket_path) {
  */
 void LedManager::HandleMessage(int client_socket, const std::string &message) {
     auto [key, value] = Service::ParseKeyValue(message);
+    std::string response;
+    std::string state;
 
     if (key == "QUERY") {
         logger().Log("Received query for LED: " + value);
-        std::string state = GetLedState(value);
-        std::string response = value + "=" + state + "\n";
+        state = GetLedState(value);
+        response = "Led" + value + "=" + state + "\n";
         SendResponse(client_socket, response);
     } else {
         logger().Log("Received update for LED: " + key + " to state: " + value);
         UpdateLedState(key, value);
+        response = "Led" + key + " Updated" + "\n";
+        SendResponse(client_socket, response);
     }
 }
 

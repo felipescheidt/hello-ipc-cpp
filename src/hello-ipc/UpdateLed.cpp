@@ -107,6 +107,14 @@ void UpdateLed::SendUpdate(const std::string &led_name, const std::string &led_s
     std::string message = led_name + "=" + led_state + "\n"; // ex: "1=on\n"
     SendMessage(message);
     logger().Log("Sent update for LED " + led_name + " to state: " + led_state);
+
+    try {
+        std::string response = ReceiveMessage();
+        logger().Log("Received response: " + response);
+        std::cout << "Response: " << response << std::endl;
+    } catch (const std::runtime_error &e) {
+        std::cout << "Error receiving response: " << e.what() << std::endl;
+    }
 }
 
 } // namespace hello_ipc
