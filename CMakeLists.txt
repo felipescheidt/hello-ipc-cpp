@@ -13,6 +13,11 @@ project(
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Protobuf
+find_package(Protobuf REQUIRED)
+set(PROTO_FILES ${CMAKE_CURRENT_SOURCE_DIR}/proto/led_service.proto)
+protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${PROTO_FILES})
+
 # Create a library for the hello_ipc code
 add_library(hello_ipc_lib
   SHARED
@@ -21,12 +26,14 @@ add_library(hello_ipc_lib
   src/hello-ipc/UpdateLed.cpp
   src/hello-ipc/Logger.cpp
   src/hello-ipc/QueryLed.cpp
+  ${PROTO_SRCS}
 )
 
 # Ensure the library and anything linking to it can find the headers
 target_include_directories(hello_ipc_lib 
   PUBLIC
     ${PROJECT_SOURCE_DIR}/include/hello-ipc
+    ${CMAKE_CURRENT_BINARY_DIR}
 )
 
 # Your main executable
@@ -38,7 +45,7 @@ add_executable(hello_ipc
 find_package(Threads REQUIRED)
 
 # Link the main executable against the hello_ipc library
-target_link_libraries(hello_ipc PRIVATE hello_ipc_lib)
+target_link_libraries(hello_ipc PRIVATE hello_ipc_lib ${Protobuf_LIBRARIES})
 
 #enable c++ compiler warnings
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")

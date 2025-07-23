@@ -1,0 +1,44 @@
+// This is a protobuf spec file to be used by the hello_ipc services
+
+syntax = "proto3";
+
+package hello_ipc;
+
+// Represents the LED state
+enum LedState {
+  OFF = 0;
+  ON = 1;
+}
+
+// Message to update the state of a specific LED
+message LedUpdateRequest {
+  string led_num = 1;
+  LedState state = 2;
+}
+
+// Message to query the state of a specific LED
+message LedQueryRequest {
+  string led_num = 1;
+}
+
+// Response containing the state of an LED
+message LedStateResponse {
+  string led_num = 1;
+  LedState state = 2;
+  string error_message = 3; // For cases like "LED not found"
+}
+
+// A general-purpose request message that can contain one of the specific request types
+message Request {
+  oneof request_type {
+    LedUpdateRequest update_request = 1;
+    LedQueryRequest query_request = 2;
+  }
+}
+
+// A general-purpose response message
+message Response {
+  oneof response_type {
+    LedStateResponse state_response = 1;
+  }
+}
