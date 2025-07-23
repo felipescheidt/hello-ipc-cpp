@@ -23,6 +23,7 @@ foreach(file ${test_sources})
   # Add include directory for hello_ipc headers
   target_include_directories(${test_name}_Test PUBLIC
     ${CMAKE_SOURCE_DIR}/include # CMAKE_SOURCE_DIR is the top-level project source dir
+    ${CMAKE_BINARY_DIR}
   )
 
   target_compile_features(${test_name}_Test PUBLIC cxx_std_17)
@@ -36,6 +37,7 @@ foreach(file ${test_sources})
     ${test_name}_Test
     PUBLIC
       hello_ipc_lib
+      ${Protobuf_LIBRARIES}
       GTest::gtest
       GTest::gmock
       GTest::gtest_main
