@@ -1,4 +1,5 @@
 #include "QueryLed.hpp"
+#include "led_service.pb.h"
 
 #include <string>
 #include <algorithm>
@@ -60,26 +61,49 @@ void QueryLed::HandleUserInput(std::istream &input_stream) {
     }
 }
 
-/**
+/** 
  * @brief Queries the state of a specific LED.
  * 
- * Sends a query message to the LedManager service and waits for a response.
+ * Constructs a request to query the LED state and sends it to the LedManager service.
  *
- * @param led_name Name of the LED to query.
- * @throws std::runtime_error If sending or receiving the message fails.
+ * @param led_name The name of the LED to query.
  */
 void QueryLed::queryState(const std::string &led_name) {
-    std::string message = "QUERY=" + led_name + "\n";
+    hello_ipc::Request req;
+    auto* query_req = req.mutable_query_request();
+    query_req->set_led_num(led_name);
+
+    std::string message;
+    if (!req.SerializeToString(&message)) {
+        std::cerr << "Error: Failed to serialize request." << std::endl;
+        return;
+    }
+
     SendMessage(message);
     logger().Log("Sent query for LED " + led_name);
 
-    try {
-        std::string response = ReceiveMessage();
-        logger().Log("Received response: " + response);
-        std::cout << "Response: " << response << std::endl;
-    } catch (const std::runtime_error &e) {
-        std::cout << "Error receiving response: " << e.what() << std::endl;
+    auto response_opt = ReceiveMessage();
+    if (!response_opt) {
+        std::cerr << "Error: Failed to receive response from server." << std::endl;
+        return;
     }
+
+    hello_ipc::Response res;
+    if (!res.ParseFromString(*response_opt)) {
+        std::cerr << "Error: Failed to parse response." << std::endl;
+        return;
+    }
+
+    if (res.has_state_response()) {
+        const auto& state_res = res.state_response();
+        if (!state_res.error_message().empty()) {
+            std::cout << "Error from server: " << state_res.error_message() << std::endl;
+        } else {
+            std::string state = (state_res.state() == hello_ipc::LedState::ON) ? "on" : "off";
+            std::cout << "Response: Led" << state_res.led_num() << "=" << state << std::endl;
+        }
+    }
+    logger().Log("Received response: " + res.DebugString());
 }
 
 } // namespace hello_ipc

@@ -9,8 +9,11 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <arpa/inet.h>
 
 namespace hello_ipc {
+
+const int kMaxMessageSize = 4096;
 
 /** 
  * @brief Constructs a Service with the given service name.
@@ -75,24 +78,34 @@ void Service::RunServer(const std::string &socket_path,
         }
 
         logger().Log("Accepted new connection.");
-        std::cout << "New client connected. ID: " << client_socket << std::endl;
+        std::cout << "New client connected. ID= " << client_socket << std::endl;
 
         // Spawn a new thread to handle the client
         std::thread([this, client_socket, handler = std::move(message_handler)]() {
-            std::string buffer;
-            char read_buffer[1024];
             while (true) {
-                ssize_t received = recv(client_socket, read_buffer, sizeof(read_buffer) - 1, 0);
-                if (received <= 0) break;
+                uint32_t msg_size;
+                // Read the 4-byte size prefix
+                ssize_t received = recv(client_socket, &msg_size, sizeof(msg_size), MSG_WAITALL);
+                if (received <= 0) {
+                    break; // Client disconnected or error
+                }
 
-                buffer.append(read_buffer, received);
-                size_t pos;
-                while ((pos = buffer.find('\n')) != std::string::npos) {
-                    std::string message = buffer.substr(0, pos);
-                    buffer.erase(0, pos + 1);
-                    if (!message.empty()) {
-                        handler(client_socket, message);
-                    }
+                msg_size = ntohl(msg_size); // Convert from network to host byte order
+                if (msg_size == 0 || msg_size > kMaxMessageSize) { // Basic sanity check
+                    logger().Log("Invalid message size received: " + std::to_string(msg_size));
+                    break;
+                }
+
+                std::vector<char> buffer(msg_size);
+
+                // Read the exact number of bytes for the message body
+                received = recv(client_socket, buffer.data(), msg_size, MSG_WAITALL);
+                if (received <= 0) {
+                    break; // Client disconnected or error
+                }
+
+                if (received == static_cast<ssize_t>(msg_size)) {
+                    handler(client_socket, std::string(buffer.begin(), buffer.end()));
                 }
             }
             logger().Log("Client disconnected.");
@@ -112,8 +125,15 @@ void Service::SendMessage(const std::string &message) const {
     if (sockfd_ < 0) {
         throw std::runtime_error("Not connected");
     }
+    // Send the size of the message first
+    uint32_t msg_size = htonl(message.length()); // Use network byte order
+    if (send(sockfd_, &msg_size, sizeof(msg_size), 0) < 0) {
+        throw std::runtime_error("Failed to send message size");
+    }
+
+    // Then send the message itself
     if (send(sockfd_, message.c_str(), message.length(), 0) < 0) {
-        throw std::runtime_error("Failed to send message");
+        throw std::runtime_error("Failed to send message data");
     }
 }
 
@@ -125,9 +145,17 @@ void Service::SendMessage(const std::string &message) const {
  * @throws std::runtime_error if sending fails.
  */
 void Service::SendResponse(int client_socket, const std::string &message) const {
+    // Send the size of the message first
+    uint32_t msg_size = htonl(message.length());
+    if (send(client_socket, &msg_size, sizeof(msg_size), 0) < 0) {
+        logger().Log("Failed to send response size to client.");
+        throw std::runtime_error("Failed to send response size");
+    }
+
+    // Then send the message itself
     if (send(client_socket, message.c_str(), message.length(), 0) < 0) {
-        logger().Log("Failed to send response to client.");
-        throw std::runtime_error("Failed to send response");
+        logger().Log("Failed to send response data to client.");
+        throw std::runtime_error("Failed to send response data");
     }
 }
 
@@ -137,46 +165,46 @@ void Service::SendResponse(int client_socket, const std::string &message) const 
  * @return The received message.
  * @throws std::runtime_error if the connection is closed or receiving fails.
  */
-std::string Service::ReceiveMessage() {
+std::optional<std::string> Service::ReceiveMessage() {
     if (sockfd_ < 0) {
-        throw std::runtime_error("Socket is not connected.");
+        logger().Log("Socket is not connected.");
+        return std::nullopt;
     }
 
-    // Set socket timeout
     SetupSocketTimeout(sockfd_);
 
-    char read_buffer[1024] = {0};
-
-    while (receive_buffer_.find('\n') == std::string::npos) {
-        ssize_t bytes_received = recv(sockfd_, read_buffer, sizeof(read_buffer) - 1, 0);
-        if (bytes_received < 0) {
-            throw std::runtime_error("Error receiving data from server.");
-        } else if (bytes_received == 0) {
-            throw std::runtime_error("Connection closed by server.");
+    uint32_t msg_size;
+    // Read the 4-byte size prefix
+    ssize_t received = recv(sockfd_, &msg_size, sizeof(msg_size), MSG_WAITALL);
+    if (received <= 0) {
+        if (received == 0) {
+            logger().Log("Connection closed by server.");
+        } else {
+            logger().Log("Error receiving message size from server.");
         }
-        receive_buffer_.append(read_buffer, bytes_received);
+        return std::nullopt;
     }
 
-    size_t pos = receive_buffer_.find('\n');
-    std::string message = receive_buffer_.substr(0, pos);
-    receive_buffer_.erase(0, pos + 1);
-
-    return message;
-}
-
-/** 
- * @brief Parses a "key=value" message into a key-value pair.
- *
- * @param msg The message to parse.
- * @return A pair containing the key and value.
- */
-std::pair<std::string, std::string> Service::ParseKeyValue(const std::string &msg) {
-    size_t pos = msg.find('=');
-    if (pos == std::string::npos) {
-        return {msg, ""};
+    msg_size = ntohl(msg_size);
+    if (msg_size == 0 || msg_size > kMaxMessageSize) { // Basic sanity check
+        logger().Log("Invalid message size received: " + std::to_string(msg_size));
+        return std::nullopt;
     }
 
-    return {msg.substr(0, pos), msg.substr(pos + 1)};
+    std::vector<char> buffer(msg_size);
+
+    // Read the exact number of bytes for the message body
+    received = recv(sockfd_, buffer.data(), msg_size, MSG_WAITALL);
+    if (received <= 0) {
+        if (received == 0) {
+            logger().Log("Connection closed by server during message read.");
+        } else {
+            logger().Log("Error receiving message data from server.");
+        }
+        return std::nullopt;
+    }
+
+    return std::string(buffer.begin(), buffer.end());
 }
 
 /** 

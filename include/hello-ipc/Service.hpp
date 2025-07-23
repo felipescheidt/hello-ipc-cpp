@@ -5,6 +5,7 @@
 
 #include <string>
 #include <functional>
+#include <optional>
 
 namespace hello_ipc {
 
@@ -27,10 +28,7 @@ class Service {
         virtual void SendMessage(const std::string &message) const;
 
         // For clients: receives a message.
-        virtual std::string ReceiveMessage();
-
-        // Helper to parse "key=value" messages.
-        static std::pair<std::string, std::string> ParseKeyValue(const std::string &msg);
+        virtual std::optional<std::string> ReceiveMessage();
 
     protected:
         // For clients: connects to a server at a given socket path.
