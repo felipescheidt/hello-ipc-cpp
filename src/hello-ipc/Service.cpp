@@ -40,11 +40,14 @@ Service::~Service() {
  * @brief Connects to a server at the specified socket path.
  *
  * @param socket_path The path to the socket file.
- * @throws std::runtime_error if the connection fails.
+ * @return true if connection is successful, false otherwise.
  */
-void Service::ConnectToServer(const std::string &socket_path) {
+bool Service::ConnectToServer(const std::string &socket_path) {
     sockfd_ = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (sockfd_ < 0) throw std::runtime_error("Failed to create socket");
+    if (sockfd_ < 0) {
+        logger().Log("Error creating socket: " + std::string(strerror(errno)));
+        return false;
+    }
 
     struct sockaddr_un server_addr;
     memset(&server_addr, 0, sizeof(server_addr));
@@ -52,10 +55,14 @@ void Service::ConnectToServer(const std::string &socket_path) {
     strncpy(server_addr.sun_path, socket_path.c_str(), sizeof(server_addr.sun_path) - 1);
 
     if (connect(sockfd_, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
-        throw std::runtime_error("Connection failed to " + socket_path);
+        logger().Log("Error connecting to server: " + std::string(strerror(errno)));
+        close(sockfd_);
+        sockfd_ = -1;
+        return false;
     }
 
     logger().Log("Connection established to " + socket_path);
+    return true;
 }
 
 /** 
@@ -119,21 +126,22 @@ void Service::RunServer(const std::string &socket_path,
  * @brief Sends a message to the connected server.
  *
  * @param message The message to send.
- * @throws std::runtime_error if the socket is not connected or sending fails.
  */
 void Service::SendMessage(const std::string &message) const {
     if (sockfd_ < 0) {
-        throw std::runtime_error("Not connected");
+        logger().Log("Not connected, cannot send message.");
+        return;
     }
     // Send the size of the message first
     uint32_t msg_size = htonl(message.length()); // Use network byte order
     if (send(sockfd_, &msg_size, sizeof(msg_size), 0) < 0) {
-        throw std::runtime_error("Failed to send message size");
+        logger().Log("Failed to send message size: " + std::string(strerror(errno)));
+        return;
     }
 
     // Then send the message itself
     if (send(sockfd_, message.c_str(), message.length(), 0) < 0) {
-        throw std::runtime_error("Failed to send message data");
+        logger().Log("Failed to send message data: " + std::string(strerror(errno)));
     }
 }
 
@@ -142,20 +150,18 @@ void Service::SendMessage(const std::string &message) const {
  *
  * @param client_socket The socket file descriptor of the client.
  * @param message The message to send as a response.
- * @throws std::runtime_error if sending fails.
  */
 void Service::SendResponse(int client_socket, const std::string &message) const {
     // Send the size of the message first
     uint32_t msg_size = htonl(message.length());
     if (send(client_socket, &msg_size, sizeof(msg_size), 0) < 0) {
         logger().Log("Failed to send response size to client.");
-        throw std::runtime_error("Failed to send response size");
+        return;
     }
 
     // Then send the message itself
     if (send(client_socket, message.c_str(), message.length(), 0) < 0) {
         logger().Log("Failed to send response data to client.");
-        throw std::runtime_error("Failed to send response data");
     }
 }
 
@@ -163,7 +169,6 @@ void Service::SendResponse(int client_socket, const std::string &message) const 
  * @brief Receives a message from the connected server.
  *
  * @return The received message.
- * @throws std::runtime_error if the connection is closed or receiving fails.
  */
 std::optional<std::string> Service::ReceiveMessage() {
     if (sockfd_ < 0) {
@@ -213,7 +218,6 @@ std::optional<std::string> Service::ReceiveMessage() {
  * Configures the socket to have a timeout for receiving and sending data.
  *
  * @param sockfd The socket file descriptor to configure.
- * @throws std::runtime_error if setting socket options fails.
  */
 void Service::SetupSocketTimeout(int sockfd) const {
     struct timeval timeout;
@@ -222,12 +226,13 @@ void Service::SetupSocketTimeout(int sockfd) const {
 
     // Set the socket receive timeout
     if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
-        throw std::runtime_error("Failed to set socket receive timeout");
+        logger().Log("Failed to set socket receive timeout: " + std::string(strerror(errno)));
+        return;
     }
 
     // Set the socket send timeout
     if (setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0) {
-        throw std::runtime_error("Failed to set socket send timeout");
+        logger().Log("Failed to set socket send timeout: " + std::string(strerror(errno)));
     }
 }
 
@@ -236,7 +241,6 @@ void Service::SetupSocketTimeout(int sockfd) const {
  *
  * @param socket_path The path to bind the server socket.
  * @return The file descriptor of the created server socket.
- * @throws std::runtime_error if socket creation, binding, or listening fails.
  */
 int Service::CreateServerSocket(const std::string &socket_path) const {
     // Ensure the socket file does not already exist
@@ -244,7 +248,8 @@ int Service::CreateServerSocket(const std::string &socket_path) const {
 
     int server_fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (server_fd < 0) {
-        throw std::runtime_error("Failed to create server socket");
+        logger().Log("Failed to create server socket: " + std::string(strerror(errno)));
+        return -1;
     }
 
     struct sockaddr_un address;
@@ -253,13 +258,15 @@ int Service::CreateServerSocket(const std::string &socket_path) const {
     strncpy(address.sun_path, socket_path.c_str(), sizeof(address.sun_path) - 1);
 
     if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
+        logger().Log("Failed to bind server socket to " + socket_path + ": " + std::string(strerror(errno)));
         close(server_fd);
-        throw std::runtime_error("Failed to bind server socket to " + socket_path);
+        return -1;
     }
 
     if (listen(server_fd, 10) < 0) {
+        logger().Log("Failed to listen on server socket: " + std::string(strerror(errno)));
         close(server_fd);
-        throw std::runtime_error("Failed to listen on server socket");
+        return -1;
     }
 
     return server_fd;

@@ -32,7 +32,7 @@ class Service {
 
     protected:
         // For clients: connects to a server at a given socket path.
-        void ConnectToServer(const std::string &socket_path);
+        bool ConnectToServer(const std::string &socket_path);
 
         // For servers: runs a multi-threaded server loop.
         void RunServer(const std::string &socket_path,
@@ -41,14 +41,16 @@ class Service {
         // For servers: sends a response back to a specific client.
         void SendResponse(int client_socket, const std::string& message) const;
 
+        // For servers: creates a server socket and binds it to the specified path.
+        int CreateServerSocket(const std::string &socket_path) const;
+
         const Logger &logger() const { return logger_; }
 
         // Getter for sockfd_
-        int& GetSocket() { return sockfd_; }
+        void SetSocketFd(int fd) { sockfd_ = fd; }
         const int& GetSocket() const { return sockfd_; }
 
     private:
-        int CreateServerSocket(const std::string &socket_path) const;
         void SetupSocketTimeout(int sockfd) const;
         Logger logger_;
         int sockfd_;
