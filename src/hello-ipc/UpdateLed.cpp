@@ -1,4 +1,5 @@
 #include "UpdateLed.hpp"
+#include "led_service.pb.h"
 
 #include <string>
 #include <algorithm>
@@ -93,28 +94,51 @@ void UpdateLed::HandleUserInput(std::istream &input_stream) {
     }
 }
 
-/**
- * @brief Sends an update command for a specific LED.
+/** 
+ * @brief Sends an update for a specific LED to the LedManager service.
  *
- * This method constructs a message in the format "led_name=led_state\n"
- * and sends it to the LedManager service.
+ * Constructs a request message and sends it to the server, then waits for a response.
  *
  * @param led_name The name of the LED to update.
- * @param led_state The new state of the LED ("on" or "off").
- * @throws std::runtime_error if sending the message fails.
+ * @param led_state The desired state of the LED ("on" or "off").
+ * @throws std::runtime_error if sending or receiving messages fails.
  */
 void UpdateLed::SendUpdate(const std::string &led_name, const std::string &led_state) {
-    std::string message = led_name + "=" + led_state + "\n"; // ex: "1=on\n"
+    hello_ipc::Request req;
+    auto* update_req = req.mutable_update_request();
+    update_req->set_led_num(led_name);
+    update_req->set_state((led_state == "on") ? hello_ipc::LedState::ON : hello_ipc::LedState::OFF);
+
+    std::string message;
+    if (!req.SerializeToString(&message)) {
+        std::cerr << "Error: Failed to serialize request." << std::endl;
+        return;
+    }
+
     SendMessage(message);
     logger().Log("Sent update for LED " + led_name + " to state: " + led_state);
 
-    try {
-        std::string response = ReceiveMessage();
-        logger().Log("Received response: " + response);
-        std::cout << "Response: " << response << std::endl;
-    } catch (const std::runtime_error &e) {
-        std::cout << "Error receiving response: " << e.what() << std::endl;
+    auto response_opt = ReceiveMessage();
+    if (!response_opt) {
+        std::cerr << "Error: Failed to receive response from server." << std::endl;
+        return;
     }
+
+    hello_ipc::Response res;
+    if (!res.ParseFromString(*response_opt)) {
+        std::cerr << "Error: Failed to parse response." << std::endl;
+        return;
+    }
+
+    if (res.has_state_response()) {
+        const auto& state_res = res.state_response();
+        if (!state_res.error_message().empty()) {
+            std::cout << "Error from server: " << state_res.error_message() << std::endl;
+        } else {
+            std::cout << "Response: Led" << state_res.led_num() << " Updated" << std::endl;
+        }
+    }
+    logger().Log("Received response: " + res.DebugString());
 }
 
 } // namespace hello_ipc

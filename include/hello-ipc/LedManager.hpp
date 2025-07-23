@@ -2,7 +2,10 @@
 #define HELLO_IPC_LED_MANAGER_HPP_
 
 #include "Service.hpp"
+#include "led_service.pb.h"
 
+#include <string>
+#include <functional>
 namespace hello_ipc {
 
 /**
@@ -20,12 +23,14 @@ namespace hello_ipc {
 class LedManager : public Service {
     public:
         LedManager();
-        void Run(const std::string& socket_path);
+        void Run(const std::string &socket_path);
 
     protected:
-        void HandleMessage(int client_socket, const std::string& message);
-        void UpdateLedState(const std::string& led_num, const std::string& led_state);
-        std::string GetLedState(const std::string& led_num) const;
+        void HandleMessage(int client_socket, const std::string &message);
+        bool UpdateLedState(const std::string &led_num, hello_ipc::LedState led_state);
+        void HandleUpdateRequest(const LedUpdateRequest &req, LedStateResponse *res);
+        void HandleQueryRequest(const LedQueryRequest &req, LedStateResponse *res);
+        std::string GetLedState(const std::string &led_num) const;
 };
 
 } // namespace hello_ipc

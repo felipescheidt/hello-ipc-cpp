@@ -9,8 +9,11 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <arpa/inet.h>
 
 namespace hello_ipc {
+
+const int kMaxMessageSize = 4096;
 
 /** 
  * @brief Constructs a Service with the given service name.
@@ -37,11 +40,14 @@ Service::~Service() {
  * @brief Connects to a server at the specified socket path.
  *
  * @param socket_path The path to the socket file.
- * @throws std::runtime_error if the connection fails.
+ * @return true if connection is successful, false otherwise.
  */
-void Service::ConnectToServer(const std::string &socket_path) {
+bool Service::ConnectToServer(const std::string &socket_path) {
     sockfd_ = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (sockfd_ < 0) throw std::runtime_error("Failed to create socket");
+    if (sockfd_ < 0) {
+        logger().Log("Error creating socket: " + std::string(strerror(errno)));
+        return false;
+    }
 
     struct sockaddr_un server_addr;
     memset(&server_addr, 0, sizeof(server_addr));
@@ -49,10 +55,14 @@ void Service::ConnectToServer(const std::string &socket_path) {
     strncpy(server_addr.sun_path, socket_path.c_str(), sizeof(server_addr.sun_path) - 1);
 
     if (connect(sockfd_, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
-        throw std::runtime_error("Connection failed to " + socket_path);
+        logger().Log("Error connecting to server: " + std::string(strerror(errno)));
+        close(sockfd_);
+        sockfd_ = -1;
+        return false;
     }
 
     logger().Log("Connection established to " + socket_path);
+    return true;
 }
 
 /** 
@@ -75,24 +85,34 @@ void Service::RunServer(const std::string &socket_path,
         }
 
         logger().Log("Accepted new connection.");
-        std::cout << "New client connected. ID: " << client_socket << std::endl;
+        std::cout << "New client connected. ID= " << client_socket << std::endl;
 
         // Spawn a new thread to handle the client
         std::thread([this, client_socket, handler = std::move(message_handler)]() {
-            std::string buffer;
-            char read_buffer[1024];
             while (true) {
-                ssize_t received = recv(client_socket, read_buffer, sizeof(read_buffer) - 1, 0);
-                if (received <= 0) break;
+                uint32_t msg_size;
+                // Read the 4-byte size prefix
+                ssize_t received = recv(client_socket, &msg_size, sizeof(msg_size), MSG_WAITALL);
+                if (received <= 0) {
+                    break; // Client disconnected or error
+                }
 
-                buffer.append(read_buffer, received);
-                size_t pos;
-                while ((pos = buffer.find('\n')) != std::string::npos) {
-                    std::string message = buffer.substr(0, pos);
-                    buffer.erase(0, pos + 1);
-                    if (!message.empty()) {
-                        handler(client_socket, message);
-                    }
+                msg_size = ntohl(msg_size); // Convert from network to host byte order
+                if (msg_size == 0 || msg_size > kMaxMessageSize) { // Basic sanity check
+                    logger().Log("Invalid message size received: " + std::to_string(msg_size));
+                    break;
+                }
+
+                std::vector<char> buffer(msg_size);
+
+                // Read the exact number of bytes for the message body
+                received = recv(client_socket, buffer.data(), msg_size, MSG_WAITALL);
+                if (received <= 0) {
+                    break; // Client disconnected or error
+                }
+
+                if (received == static_cast<ssize_t>(msg_size)) {
+                    handler(client_socket, std::string(buffer.begin(), buffer.end()));
                 }
             }
             logger().Log("Client disconnected.");
@@ -106,14 +126,22 @@ void Service::RunServer(const std::string &socket_path,
  * @brief Sends a message to the connected server.
  *
  * @param message The message to send.
- * @throws std::runtime_error if the socket is not connected or sending fails.
  */
 void Service::SendMessage(const std::string &message) const {
     if (sockfd_ < 0) {
-        throw std::runtime_error("Not connected");
+        logger().Log("Not connected, cannot send message.");
+        return;
     }
+    // Send the size of the message first
+    uint32_t msg_size = htonl(message.length()); // Use network byte order
+    if (send(sockfd_, &msg_size, sizeof(msg_size), 0) < 0) {
+        logger().Log("Failed to send message size: " + std::string(strerror(errno)));
+        return;
+    }
+
+    // Then send the message itself
     if (send(sockfd_, message.c_str(), message.length(), 0) < 0) {
-        throw std::runtime_error("Failed to send message");
+        logger().Log("Failed to send message data: " + std::string(strerror(errno)));
     }
 }
 
@@ -122,12 +150,18 @@ void Service::SendMessage(const std::string &message) const {
  *
  * @param client_socket The socket file descriptor of the client.
  * @param message The message to send as a response.
- * @throws std::runtime_error if sending fails.
  */
 void Service::SendResponse(int client_socket, const std::string &message) const {
+    // Send the size of the message first
+    uint32_t msg_size = htonl(message.length());
+    if (send(client_socket, &msg_size, sizeof(msg_size), 0) < 0) {
+        logger().Log("Failed to send response size to client.");
+        return;
+    }
+
+    // Then send the message itself
     if (send(client_socket, message.c_str(), message.length(), 0) < 0) {
-        logger().Log("Failed to send response to client.");
-        throw std::runtime_error("Failed to send response");
+        logger().Log("Failed to send response data to client.");
     }
 }
 
@@ -135,48 +169,47 @@ void Service::SendResponse(int client_socket, const std::string &message) const 
  * @brief Receives a message from the connected server.
  *
  * @return The received message.
- * @throws std::runtime_error if the connection is closed or receiving fails.
  */
-std::string Service::ReceiveMessage() {
+std::optional<std::string> Service::ReceiveMessage() {
     if (sockfd_ < 0) {
-        throw std::runtime_error("Socket is not connected.");
+        logger().Log("Socket is not connected.");
+        return std::nullopt;
     }
 
-    // Set socket timeout
     SetupSocketTimeout(sockfd_);
 
-    char read_buffer[1024] = {0};
-
-    while (receive_buffer_.find('\n') == std::string::npos) {
-        ssize_t bytes_received = recv(sockfd_, read_buffer, sizeof(read_buffer) - 1, 0);
-        if (bytes_received < 0) {
-            throw std::runtime_error("Error receiving data from server.");
-        } else if (bytes_received == 0) {
-            throw std::runtime_error("Connection closed by server.");
+    uint32_t msg_size;
+    // Read the 4-byte size prefix
+    ssize_t received = recv(sockfd_, &msg_size, sizeof(msg_size), MSG_WAITALL);
+    if (received <= 0) {
+        if (received == 0) {
+            logger().Log("Connection closed by server.");
+        } else {
+            logger().Log("Error receiving message size from server.");
         }
-        receive_buffer_.append(read_buffer, bytes_received);
+        return std::nullopt;
     }
 
-    size_t pos = receive_buffer_.find('\n');
-    std::string message = receive_buffer_.substr(0, pos);
-    receive_buffer_.erase(0, pos + 1);
-
-    return message;
-}
-
-/** 
- * @brief Parses a "key=value" message into a key-value pair.
- *
- * @param msg The message to parse.
- * @return A pair containing the key and value.
- */
-std::pair<std::string, std::string> Service::ParseKeyValue(const std::string &msg) {
-    size_t pos = msg.find('=');
-    if (pos == std::string::npos) {
-        return {msg, ""};
+    msg_size = ntohl(msg_size);
+    if (msg_size == 0 || msg_size > kMaxMessageSize) { // Basic sanity check
+        logger().Log("Invalid message size received: " + std::to_string(msg_size));
+        return std::nullopt;
     }
 
-    return {msg.substr(0, pos), msg.substr(pos + 1)};
+    std::vector<char> buffer(msg_size);
+
+    // Read the exact number of bytes for the message body
+    received = recv(sockfd_, buffer.data(), msg_size, MSG_WAITALL);
+    if (received <= 0) {
+        if (received == 0) {
+            logger().Log("Connection closed by server during message read.");
+        } else {
+            logger().Log("Error receiving message data from server.");
+        }
+        return std::nullopt;
+    }
+
+    return std::string(buffer.begin(), buffer.end());
 }
 
 /** 
@@ -185,7 +218,6 @@ std::pair<std::string, std::string> Service::ParseKeyValue(const std::string &ms
  * Configures the socket to have a timeout for receiving and sending data.
  *
  * @param sockfd The socket file descriptor to configure.
- * @throws std::runtime_error if setting socket options fails.
  */
 void Service::SetupSocketTimeout(int sockfd) const {
     struct timeval timeout;
@@ -194,12 +226,13 @@ void Service::SetupSocketTimeout(int sockfd) const {
 
     // Set the socket receive timeout
     if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
-        throw std::runtime_error("Failed to set socket receive timeout");
+        logger().Log("Failed to set socket receive timeout: " + std::string(strerror(errno)));
+        return;
     }
 
     // Set the socket send timeout
     if (setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0) {
-        throw std::runtime_error("Failed to set socket send timeout");
+        logger().Log("Failed to set socket send timeout: " + std::string(strerror(errno)));
     }
 }
 
@@ -208,7 +241,6 @@ void Service::SetupSocketTimeout(int sockfd) const {
  *
  * @param socket_path The path to bind the server socket.
  * @return The file descriptor of the created server socket.
- * @throws std::runtime_error if socket creation, binding, or listening fails.
  */
 int Service::CreateServerSocket(const std::string &socket_path) const {
     // Ensure the socket file does not already exist
@@ -216,7 +248,8 @@ int Service::CreateServerSocket(const std::string &socket_path) const {
 
     int server_fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (server_fd < 0) {
-        throw std::runtime_error("Failed to create server socket");
+        logger().Log("Failed to create server socket: " + std::string(strerror(errno)));
+        return -1;
     }
 
     struct sockaddr_un address;
@@ -225,13 +258,15 @@ int Service::CreateServerSocket(const std::string &socket_path) const {
     strncpy(address.sun_path, socket_path.c_str(), sizeof(address.sun_path) - 1);
 
     if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
+        logger().Log("Failed to bind server socket to " + socket_path + ": " + std::string(strerror(errno)));
         close(server_fd);
-        throw std::runtime_error("Failed to bind server socket to " + socket_path);
+        return -1;
     }
 
     if (listen(server_fd, 10) < 0) {
+        logger().Log("Failed to listen on server socket: " + std::string(strerror(errno)));
         close(server_fd);
-        throw std::runtime_error("Failed to listen on server socket");
+        return -1;
     }
 
     return server_fd;
